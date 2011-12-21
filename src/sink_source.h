@@ -18,7 +18,7 @@ class Sink {
     virtual ~Sink();
 
     virtual void append(const char *bytes, size_t n) = 0;
-    virtual const char *peek_back(size_t offset) = 0;
+    virtual const char *peek_back(size_t offset, size_t n) = 0;
     virtual size_t pos() const = 0;
 };
 
@@ -29,8 +29,8 @@ class Source {
 
     virtual size_t available() const = 0;
     virtual size_t pos() const = 0;
-    virtual const char *peek() = 0;
-    virtual const char *peek_back(size_t offset) = 0;
+    virtual const char *peek(size_t n) = 0;
+    virtual const char *peek_back(size_t offset, size_t n) = 0;
     virtual void skip(size_t n) = 0;
 };
 
@@ -40,7 +40,7 @@ class ByteArraySink : public Sink {
     virtual ~ByteArraySink();
 
     virtual void append(const char *bytes, size_t n);
-    virtual const char *peek_back(size_t offset) { return dest_ - offset - 1; }
+    virtual const char *peek_back(size_t offset, size_t /* n*/) { return dest_ - offset - 1; }
     virtual size_t pos() const { return pos_; }
   private:
     char *dest_;
@@ -54,8 +54,8 @@ class ByteArraySource : public Source {
 
     virtual size_t pos() const { return pos_; }
     virtual size_t available() const { return left_; }
-    virtual const char *peek() { return src_; }
-    virtual const char *peek_back(size_t offset) { return src_ - offset - 1; }
+    virtual const char *peek(size_t /*n*/) { return src_; }
+    virtual const char *peek_back(size_t offset, size_t /* n*/) { return src_ - offset - 1; }
     virtual void skip(size_t n);
   private:
     const char *src_;

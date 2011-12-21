@@ -24,7 +24,7 @@ void Encoder::encode() {
         uint16_t locn;
         uint8_t len;
         while (looking) {
-            bool have_match = find_match(src_->peek(),
+            bool have_match = find_match(src_->peek(look_ahead),
                                          look_ahead,
                                          &locn,
                                          &len);

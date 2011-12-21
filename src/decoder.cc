@@ -34,7 +34,7 @@ void Decoder::decode() {
             const char *data;
             locn = internal::read_from_stream<uint16_t, 12>(&inb_);
             len = internal::read_from_stream<uint16_t, 4>(&inb_);
-            data = sink_->peek_back(locn);
+            data = sink_->peek_back(locn, len);
             sink_->append(data, len);
         }  else {
             char byte = internal::read_from_stream<char, 8>(&inb_);

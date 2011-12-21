@@ -90,7 +90,7 @@ inline void Encoder::emit_compressed(uint16_t locn, uint8_t len) {
 }
 
 inline void Encoder::output_byte() {
-    const char *byte = src_->peek();
+    const char *byte = src_->peek(1);
     emit_literal(*byte);
     src_->skip(1);
 }
@@ -111,7 +111,7 @@ inline bool Encoder::find_match(const char *inp,
         off = src_->pos() - 1;
         lim = src_->pos() - 1;        
     }
-    const char *win = src_->peek_back(off);
+    const char *win = src_->peek_back(off, lim);
     size_t pos;
     if (internal::find_in_window(win, lim, inp, look_ahead, &pos)) {
         *locn = off - pos;
