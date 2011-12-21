@@ -1,6 +1,6 @@
-#include "sink_source.h"
-
 #include <cstring>
+
+#include "sink_source.h"
 
 namespace alz {
 
