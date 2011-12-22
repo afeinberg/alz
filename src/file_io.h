@@ -21,7 +21,7 @@
 
 namespace alz {
 
-static const size_t kDefaultFileSinkBufLen = 8192;
+static const size_t kDefaultFileSinkBufLen = 16384;
 
 class FileSink : public Sink {
   public:
