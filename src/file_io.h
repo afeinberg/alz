@@ -21,7 +21,7 @@
 
 namespace alz {
 
-static const size_t kDefaultFileSinkBufLen = 16384;
+static const size_t kDefaultFileSinkBufLen = 4096;
 
 class FileSink : public Sink {
   public:
@@ -29,7 +29,7 @@ class FileSink : public Sink {
     virtual ~FileSink();
 
     virtual void append(const char *bytes, size_t n);
-    virtual const char *peek_back(size_t offset);
+    virtual const char *peek_back(size_t offset) { return ptr_ - offset - 1; }
     virtual size_t pos() const { return gpos_; }
     
     bool open_file();
@@ -41,18 +41,14 @@ class FileSink : public Sink {
   private:
     const char *path_;
     size_t buf_len_;
-    size_t mid_point_;
     int fd_;
+    size_t left_; // Space remaining in the buffer
     size_t gpos_;  // Global position
-    size_t bpos_;  // Position in the buffer
-    bool first_flush_;
+    char *double_buf_;
     char *buf_;
+    char *ptr_;
 };
 
-inline const char* FileSink::peek_back(size_t offset) {
-    assert(offset < mid_point_);
-    return buf_ + bpos_ - offset - 1;
-}
 
 /**
 class FileSource : public Source {

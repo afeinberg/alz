@@ -12,39 +12,31 @@ namespace alz {
 FileSink::FileSink(const char *path, size_t buf_len)
         :path_(path),
          buf_len_(buf_len),
-         mid_point_(buf_len / 2),
          fd_(-1),
+         left_(buf_len_),
          gpos_(0),
-         bpos_(0),
-         first_flush_(true),
-         buf_(new char [buf_len]) { }
+         double_buf_(new char [buf_len_*2]),
+         buf_(double_buf_ + buf_len_),
+         ptr_(buf_) {
+    memset(double_buf_, 0, buf_len_*2);
+}
 
 FileSink::~FileSink() {
-    delete [] buf_;
+    delete [] double_buf_;
 }
 
 void FileSink::append(const char *bytes, size_t n) {
-    // Check if have enough space to write
-    if (bpos_ + n < buf_len_) {
-        memcpy(buf_ + bpos_, bytes, n);
-        bpos_ += n;
-        gpos_ += n;
+    if (n <= left_) {
+        memcpy(ptr_, bytes, n);
+        ptr_ += n;
+        left_ -= n;
     } else {
-        // If we do not, then: first copy up to end of the buffer
-        // Then: flush the buffer, copy buffer from mid_point_ to end to
-        // begining of the buffer_, then copy the rest from
-        // mid_point_ to mid_point_ + n
-        size_t left = buf_len_ - bpos_;
-        if (left > 0) {
-            memcpy(buf_ + bpos_, bytes, left);
-            bytes += left;
-            n -= left;
-            bpos_ += left;
-            gpos_ += left;
-        }
+        memcpy(ptr_, bytes, left_);
+        n -= left_;
+        bytes += left_;
+        ptr_ += left_;
         flush();
-        memcpy(buf_, buf_ + mid_point_, buf_len_ - mid_point_);
-        memset(buf_ + mid_point_, 0, buf_len_ - mid_point_);
+        memcpy(double_buf_, buf_, buf_len_);
         append(bytes, n);
     }
 }
@@ -69,21 +61,13 @@ bool FileSink::close_file() {
 }
 
 void FileSink::flush() {
-    char *start;
-    size_t count;
-    if (first_flush_) {
-        start = buf_;
-        count = bpos_;
-        first_flush_ = false;
-    } else {
-        start = buf_ + mid_point_;
-        count = bpos_ - mid_point_;
-    }
-    size_t nb = write(fd_, start, count);
+    size_t count = ptr_ - buf_;
+    size_t nb = write(fd_, buf_, count);
     if (nb < count) {
         perror("write()");
     } else {
-        bpos_ = mid_point_;
+        ptr_ = buf_;
+        left_ = buf_len_;
     }
 }
 

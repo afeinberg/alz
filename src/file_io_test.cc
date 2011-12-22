@@ -57,7 +57,7 @@ class FileSinkTest : public ::testing::Test {
     
     char *slurp(const char *path, size_t *len) {
         struct stat sb;
-        size_t file_size;
+        ssize_t file_size;
         char *ret;
         int fd;
         if (stat(path, &sb) == -1) {
