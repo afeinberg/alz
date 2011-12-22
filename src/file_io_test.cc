@@ -106,7 +106,6 @@ TEST_F(FileSinkTest, test_append_peek_back) {
     size_t output_size;
     char *output = slurp("decoded.dat", &output_size);
     ASSERT_TRUE(output != NULL);
-    EXPECT_EQ(output_size, encoder_in_size_);
     EXPECT_TRUE(memcmp(output, encoder_in_, output_size) == 0);
     delete [] output;
 }

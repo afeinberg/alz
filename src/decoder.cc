@@ -7,7 +7,7 @@ namespace alz {
 namespace internal {
 
 template <typename IntType, int NBits>
-inline IntType read_from_stream(InBitStream *inb) {
+IntType read_from_stream(InBitStream *inb) {
     IntType ret = 0;
     for (int i = 0; i < NBits && inb->available() > 0; ++i) {
         ret |= inb->next() << i;
@@ -33,7 +33,7 @@ void Decoder::decode() {
             uint8_t len;
             const char *data;
             locn = internal::read_from_stream<uint16_t, 12>(&inb_);
-            len = internal::read_from_stream<uint16_t, 4>(&inb_);
+            len = internal::read_from_stream<uint8_t, 4>(&inb_);
             data = sink_->peek_back(locn);
             sink_->append(data, len);
         }  else {
