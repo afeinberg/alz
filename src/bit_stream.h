@@ -51,7 +51,7 @@ inline bool InBitStream::next() {
     }
     if (pos_ == 0) {
         if (src_->available() > 0) {
-            buf_ = src_->peek(buf_len_);
+            buf_ = src_->peek();
             if (src_->available() < buf_len_) {
                 src_->skip(src_->available());
             } else {
