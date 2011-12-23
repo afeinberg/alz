@@ -41,11 +41,11 @@ class FileSinkTest : public ::testing::Test {
     virtual void TearDown() {
         if (encoder_sink_->is_open()) {
             encoder_sink_->close_file();
-            //unlink("encoded.dat");
+            unlink("encoded.dat");
         }
         if (decoder_sink_->is_open()) {
             decoder_sink_->close_file();
-            //unlink("decoded.dat");
+            unlink("decoded.dat");
         }
         if (encoder_in_ != NULL) {
             delete [] encoder_in_;
