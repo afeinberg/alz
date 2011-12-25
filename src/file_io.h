@@ -21,7 +21,7 @@
 
 namespace alz {
 
-static const size_t kDefaultFileBufLen = 4096;
+static const size_t kDefaultFileBufLen = 8192;
 
 class FileSink : public Sink {
   public:
@@ -51,22 +51,26 @@ class FileSink : public Sink {
 
 
 class FileSource : public Source {
+  public:
     FileSource(const char *path, size_t buf_len = kDefaultFileBufLen);
     virtual ~FileSource();
 
     virtual size_t available() const { return gleft_; }
     virtual size_t pos() const { return gpos_; }
 
-    virtual const char *peek() = 0;
-    virtual const char *peek_back(size_t offset) = 0;
-    virtual void skip(size_t n) = 0;
+    virtual const char *peek();
+    virtual const char *peek_back(size_t offset);
+    virtual void skip(size_t n);
     
     bool open_file();
     bool close_file();
 
     bool is_open() const { return fd_ != -1; }
-    bool is_closed() const { return fd_ != -1; }    
+    bool is_closed() const { return fd_ == -1; }    
   private:
+    // Fetch a "page" into buffer
+    bool fetch_page();
+    
     const char *path_;
     size_t buf_len_;
     int fd_;
@@ -77,6 +81,17 @@ class FileSource : public Source {
     char *buf_;
     char *ptr_;
 };
+
+inline const char *FileSource::peek() {
+    assert(is_open());
+    return ptr_;
+}
+
+inline const char *FileSource::peek_back(size_t offset) {
+    assert(is_open());    
+    return ptr_ - offset - 1;
+}
+
 
 } // namespace alz
 

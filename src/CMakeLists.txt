@@ -1,6 +1,7 @@
 find_package(GTest)
 
 set(COMMON_SOURCES 
+  constants.h
   bit_stream.cc bit_stream.h
   sink_source.cc sink_source.h
   file_io.cc file_io.h

@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include "constants.h"
 #include "file_io.h"
 
 namespace alz {
@@ -15,10 +16,9 @@ FileSink::FileSink(const char *path, size_t buf_len)
          fd_(-1),
          left_(buf_len_),
          gpos_(0),
-         double_buf_(new char [buf_len_*2]),
+         double_buf_(new char [buf_len_ * 2]),
          buf_(double_buf_ + buf_len_),
          ptr_(buf_) {
-    memset(double_buf_, 0, buf_len_*2);
 }
 
 FileSink::~FileSink() {
@@ -80,33 +80,64 @@ FileSource::FileSource(const char *path, size_t buf_len)
          gpos_(0),
          gleft_(0),
          bleft_(0),
-         double_buf_(new char[buf_len_*2]),
+         double_buf_(new char[buf_len_ * 2]),
          buf_(double_buf_ + buf_len_),
-         ptr_(buf_) {
-    memset(double_buf_, 0, buf_len_ * 2);
+         ptr_(buf_ + buf_len_) {
 }
 
 FileSource::~FileSource() {
     delete [] double_buf_;
 }
 
-const char *FileSource::peek() {
-    return NULL;
-}
-
-const char *FileSource::peek_back(size_t /*offset*/) {
-    return NULL;
-}
-
-void FileSource::skip(size_t /*n*/) {
+void FileSource::skip(size_t n) {
+    assert(n <= constants::kMaxLen);
+    assert(is_open());
+    ptr_ += n;
+    gpos_ += n;
+    bleft_ -= n;   
+    gleft_ -= n;
+    if (bleft_ < constants::kMaxLen) {
+        memcpy(double_buf_, buf_, buf_len_);
+        fetch_page();        
+    }
 }
 
 bool FileSource::open_file() {
-    return false;
+    assert(is_closed());
+    struct stat sb;
+    if (stat(path_, &sb) == -1) {
+        perror("stat");
+        return false;
+    }
+    gleft_ = sb.st_size;
+    fd_ = open(path_, O_RDONLY);
+    if (fd_ == -1) {
+        perror("false()");
+        return false;
+    }
+    assert(fetch_page());
+    return true;    
 }
 
 bool FileSource::close_file() {
-    return false;
+    assert(is_open());
+    if (close(fd_) != 0) {
+        perror("close()");
+        return false;
+    }
+    return true;
+}
+
+bool FileSource::fetch_page() {
+    ssize_t nb = read(fd_, buf_, buf_len_);
+    if (nb < 0) {
+        perror("read()");
+        return false;
+    } 
+    ptr_ -= buf_len_;
+    bleft_ += buf_len_;
+    printf("fetch_page(): bleft = %ld\n", bleft_);
+    return true;
 }
 
 } // namespace alz

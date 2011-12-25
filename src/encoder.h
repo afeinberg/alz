@@ -7,6 +7,7 @@
 #include <cstring>
 
 #include "bit_stream.h"
+#include "constants.h"
 
 namespace alz {
 
@@ -62,8 +63,6 @@ class Encoder {
     // Flush out the rest of the buffer to source
     void flush();    
   private:
-    static const size_t kMaxLen = 15;
-    static const size_t kMaxOffset = 4095;
     static const size_t kMinLookAhead = 2;
     
     void output_byte();
@@ -101,12 +100,12 @@ inline bool Encoder::find_match(const char *inp,
                                 uint8_t *len) {
     size_t off;
     size_t lim;
-    if (look_ahead > kMaxLen) {
+    if (look_ahead > constants::kMaxLen) {
         return false;
     }
-    if (src_->pos() - 1 > kMaxOffset) {
-        off = kMaxOffset;
-        lim = kMaxOffset;
+    if (src_->pos() - 1 > constants::kMaxOffset) {
+        off = constants::kMaxOffset;
+        lim = constants::kMaxOffset;
     } else {
         off = src_->pos() - 1;
         lim = src_->pos() - 1;        
