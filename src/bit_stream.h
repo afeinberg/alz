@@ -31,7 +31,7 @@ class InBitStream {
     shared_ptr<Source> src_;
     size_t buf_len_;
     size_t buf_bits_;
-    const char *buf_;
+    char *buf_;
     size_t pos_;
 };
 
@@ -51,12 +51,10 @@ inline bool InBitStream::next() {
     }
     if (pos_ == 0) {
         if (src_->available() > 0) {
-            buf_ = src_->peek();
-            if (src_->available() < buf_len_) {
-                src_->skip(src_->available());
-            } else {
-                src_->skip(buf_len_);
-            }
+            size_t to_skip = src_->available() < buf_len_ ?
+                src_->available() : buf_len_;
+            memcpy(buf_, src_->peek(), to_skip);           
+            src_->skip(to_skip);
         }
     }
     ret = get_bit(pos_++);

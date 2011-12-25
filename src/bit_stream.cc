@@ -7,10 +7,12 @@ InBitStream::InBitStream(const shared_ptr<Source> &src,
         :src_(src),
          buf_len_(buf_len),
          buf_bits_(buf_len * 8),
-         buf_(NULL),
+         buf_(new char[buf_len_]),
          pos_(0) { }
 
-InBitStream::~InBitStream() { }
+InBitStream::~InBitStream() {
+    delete [] buf_;
+}
 
 OutBitStream::OutBitStream(const shared_ptr<Sink> &sink,
                            size_t buf_len)
@@ -33,3 +35,4 @@ void OutBitStream::flush() {
 }
 
 } // namespace alz
+
