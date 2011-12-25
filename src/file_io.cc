@@ -112,7 +112,7 @@ bool FileSource::open_file() {
     gleft_ = sb.st_size;
     fd_ = open(path_, O_RDONLY);
     if (fd_ == -1) {
-        perror("false()");
+        perror("open()");
         return false;
     }
     assert(fetch_page());
@@ -136,7 +136,6 @@ bool FileSource::fetch_page() {
     } 
     ptr_ -= buf_len_;
     bleft_ += buf_len_;
-    printf("fetch_page(): bleft = %ld\n", bleft_);
     return true;
 }
 

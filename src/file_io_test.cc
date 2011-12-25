@@ -129,9 +129,8 @@ class FileSourceTest : public ::testing::Test {
     // }
 
     virtual void TearDown() {
-        //unlink("encoded.dat");
-        //unlink("decoded.dat");
-        
+        unlink("encoded.dat");
+        unlink("decoded.dat");        
     }
 
     const char *path_;

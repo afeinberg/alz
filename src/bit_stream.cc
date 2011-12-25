@@ -7,11 +7,11 @@ InBitStream::InBitStream(const shared_ptr<Source> &src,
         :src_(src),
          buf_len_(buf_len),
          buf_bits_(buf_len * 8),
-         buf_(new char[buf_len_]),
+         buf_(NULL),
          pos_(0) { }
 
 InBitStream::~InBitStream() {
-    delete [] buf_;
+    // delete [] buf_;
 }
 
 OutBitStream::OutBitStream(const shared_ptr<Sink> &sink,
