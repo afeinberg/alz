@@ -31,8 +31,13 @@ Quick explanation:
 
 * bit_stream.h implements input / output bit streams which respect 
   network byte order (by writing character by character) over the
-  Sink / Source abstractions
+  Sink / Source abstractions.
 
+  Note: bit_stream is purely inline, as it's called many times inside
+  loops. I am also using templates to specify types and bit counts
+  once in both InBitStream and OutBitStream, as to allow the compiler
+  to unroll the loops within those methods.
+  
 * encoder.cc / encoder.h and decoder.cc / decoder.h should be self
   explanatory 
 
