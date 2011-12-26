@@ -14,43 +14,7 @@
 
 namespace alz {
 
-namespace internal {
-
-template <typename IntType, int NBits>
-inline void write_to_stream(OutBitStream *outb, IntType val) {
-    for (int i = 0; i < NBits; ++i) {
-        outb->append((val >> i) & 1);
-    }
-}
-
-// Wrap memmoves
-inline bool find_in_window(const char *haystack,
-                           size_t haystack_len,
-                           const char *needle,
-                           size_t needle_len,
-                           size_t *needle_pos) {
-    const char *needle_found;
-    needle_found = static_cast<const char *>(memmem_opt((void *) haystack,
-                                                        haystack_len,
-                                                        (void *) needle,
-                                                        needle_len));
-    if (needle_found != NULL) {
-        *needle_pos = needle_found - haystack;
-        return true;
-    }
-    return false;
-}
-
-} // namespace internal
-
 using std::shared_ptr;
-
-struct Match {
-    const char *inp_;
-    size_t pos_;
-    uint16_t locn_;
-    uint8_t len_;
-};
     
 class Encoder {
   public:
@@ -73,8 +37,13 @@ class Encoder {
     // Flush out the rest of the buffer to source
     void flush();    
   private:
-    static const size_t kMinLookAhead = 2;
-    
+    static const size_t kMinLookAhead = 3;
+
+    static bool find_in_window(const char *haystack,
+                               size_t haystack_len,
+                               const char *needle,
+                               size_t needle_len,
+                               size_t *needle_pos);        
     void output_byte();
     bool find_match(const char *inp,
                     size_t look_ahead,
@@ -89,13 +58,13 @@ class Encoder {
     
 inline void Encoder::emit_literal(char byte) {
     outb_.append(false);
-    internal::write_to_stream<char, 8>(&outb_, byte);
+    outb_.append_bits<char, 8>(byte);
 }
 
 inline void Encoder::emit_compressed(uint16_t locn, uint8_t len) {
     outb_.append(true);
-    internal::write_to_stream<uint16_t, 12>(&outb_, locn);
-    internal::write_to_stream<uint8_t, 4>(&outb_, len);
+    outb_.append_bits<uint16_t, 12>(locn);
+    outb_.append_bits<uint8_t, 4>(len);
 }
 
 inline void Encoder::output_byte() {
@@ -122,9 +91,26 @@ inline bool Encoder::find_match(const char *inp,
     }    
     const char *win = src_->peek_back(off);
     size_t pos;
-    if (internal::find_in_window(win, lim, inp, look_ahead, &pos)) {
+    if (find_in_window(win, lim, inp, look_ahead, &pos)) {
         *locn = off - pos;
         *len = look_ahead;       
+        return true;
+    }
+    return false;
+}
+    
+inline bool Encoder::find_in_window(const char *haystack,
+                                    size_t haystack_len,
+                                    const char *needle,
+                                    size_t needle_len,
+                                    size_t *needle_pos) {
+    const char *needle_found;
+    needle_found = static_cast<const char *>(memmem_opt((void *) haystack,
+                                                        haystack_len,
+                                                        (void *) needle,
+                                                        needle_len));
+    if (needle_found != NULL) {
+        *needle_pos = needle_found - haystack;
         return true;
     }
     return false;

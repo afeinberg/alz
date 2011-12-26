@@ -25,6 +25,8 @@ class InBitStream {
     size_t available() const;
     
     bool next();
+    template <typename IntType, int NBits> IntType next_bits();
+    
   private:
     bool get_bit(size_t n);
     
@@ -61,6 +63,15 @@ inline bool InBitStream::next() {
     return ret;
 }
 
+template <typename IntType, int NBits>
+inline IntType InBitStream::next_bits() {
+    IntType ret = 0;
+    for (int i = 0; i < NBits && available() > 0; ++i) {
+        ret |= next() << i;
+    }
+    return ret;
+}
+
 class OutBitStream {
   public:
     OutBitStream(const shared_ptr<Sink> &sink,
@@ -68,6 +79,9 @@ class OutBitStream {
     ~OutBitStream();
 
     void append(bool bit);
+
+    template <typename IntType, int NBits> void append_bits(IntType val);
+    
     void flush();
   private:
     void put_bit(size_t n, bool bit);
@@ -93,6 +107,14 @@ inline void OutBitStream::append(bool bit) {
         flush();
     }
 }
+
+template <typename IntType, int NBits>
+inline void OutBitStream::append_bits(IntType val) {
+    for (int i = 0; i < NBits; ++i) {
+        append((val >> i) & 1);
+    }
+}
+
 
 } // namespace alz
 

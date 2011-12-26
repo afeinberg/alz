@@ -7,9 +7,6 @@
  * using conventional FILE or ifstream for this, I am sticking with
  * write()/read() system calls and doing my own buffering.
  *
- * Double buffering still occurs with the OS page cache, but I am
- * avoiding the use of direct I/O for now. I am not using memory
- * mapped I/O for this as the accesses are almost entirely sequential.
  */
 
 #ifndef ALZ_FILE_IO_H_
@@ -21,7 +18,7 @@
 
 namespace alz {
 
-static const size_t kDefaultFileBufLen = 8192;
+static const size_t kDefaultFileBufLen = 0xFFFF;
 
 class FileSink : public Sink {
   public:

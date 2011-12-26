@@ -4,19 +4,6 @@
 
 namespace alz {
 
-namespace internal {
-
-template <typename IntType, int NBits>
-IntType read_from_stream(InBitStream *inb) {
-    IntType ret = 0;
-    for (int i = 0; i < NBits && inb->available() > 0; ++i) {
-        ret |= inb->next() << i;
-    }
-    return ret;
-}
-
-} // namespace internal
-
 Decoder::Decoder(const shared_ptr<Source> &src,
                  const shared_ptr<Sink> &sink)
         :src_(src),
@@ -32,12 +19,12 @@ void Decoder::decode() {
             uint16_t locn;
             uint8_t len;
             const char *data;
-            locn = internal::read_from_stream<uint16_t, 12>(&inb_);
-            len = internal::read_from_stream<uint8_t, 4>(&inb_);
+            locn = inb_.next_bits<uint16_t, 12>();
+            len = inb_.next_bits<uint8_t, 4>();
             data = sink_->peek_back(locn);
             sink_->append(data, len);
         }  else {
-            char byte = internal::read_from_stream<char, 8>(&inb_);
+            char byte = inb_.next_bits<char, 8>();
             sink_->append(&byte, 1);
         }
     }
