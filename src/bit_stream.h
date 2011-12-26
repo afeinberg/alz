@@ -31,7 +31,9 @@ class InBitStream {
     size_t available() const;
     
     bool next();
-    template <typename IntType, int NBits> IntType next_bits();
+    
+    template <typename IntType, int NBits>
+    IntType next_bits();
     
   private:
     bool get_bit(size_t n);
@@ -87,7 +89,8 @@ class OutBitStream {
 
     void append(bool bit);
 
-    template <typename IntType, int NBits> void append_bits(IntType val);
+    template <typename IntType, int NBits>
+    void append_bits(IntType val);
     
     void flush();
   private:
