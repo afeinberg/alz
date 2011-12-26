@@ -46,14 +46,15 @@ class Encoder {
                                size_t *needle_pos);        
     void output_byte();
     bool find_match(const char *inp,
-                    size_t look_ahead,
-                    uint16_t *locn,
-                    uint8_t *len);
+                    size_t look_ahead);
     
     shared_ptr<Source> src_;
     shared_ptr<Sink> sink_;    
     OutBitStream outb_;
     size_t init_pos_;
+    bool matched_;
+    uint16_t match_locn_;
+    uint8_t match_len_;
 };
     
 inline void Encoder::emit_literal(char byte) {

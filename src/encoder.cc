@@ -18,20 +18,17 @@ void Encoder::encode() {
             output_byte();
             continue;
         }
-        bool matched = false;
+        matched_ = false;
         bool looking = true;
         size_t look_ahead = kMinLookAhead;
-        uint16_t locn = 0;
-        uint8_t len = 0;
-        while (looking) {
-            bool have_match = find_match(src_->peek(),
-                                         look_ahead,
-                                         &locn,
-                                         &len);
+        match_locn_ = 0;
+        match_len_ = 0;
+        while (looking && look_ahead <= constants::kMaxLen) {
+            bool have_match = find_match(src_->peek(), look_ahead);
             if (!have_match) {
                 looking = false;
             } else {
-                matched = true;
+                matched_ = true;
                 if (src_->available() > look_ahead) {
                     look_ahead++;
                 } else {
@@ -39,40 +36,42 @@ void Encoder::encode() {
                 }
             }
         }
-        if (!matched) {
+        if (!matched_) {
             output_byte();
         } else {
-            emit_compressed(locn, len);
-            src_->skip(len);
+            emit_compressed(match_locn_, match_len_);
+            src_->skip(match_len_);
         }
     }
 }
 
 void Encoder::flush() {
     outb_.flush();
+    sink_->flush();
 }
 
-bool Encoder::find_match(const char *inp,
-                         size_t look_ahead,
-                         uint16_t *locn,
-                         uint8_t *len) {
+bool Encoder::find_match(const char *inp, size_t look_ahead) {
+    assert(look_ahead <= constants::kMaxLen);
     size_t off;
     size_t lim;
-    if (look_ahead > constants::kMaxLen) {
-        return false;
-    }
     if (src_->pos() - 1 > constants::kMaxOffset) {
         off = constants::kMaxOffset;
         lim = constants::kMaxOffset;
     } else {
         off = src_->pos() - 1;
         lim = src_->pos() - 1;        
-    }    
-    const char *win = src_->peek_back(off);
+    }
+    const char *win;
+    if (matched_) {
+        win = src_->peek_back(match_locn_);
+        lim = match_locn_;
+    } else {
+        win = src_->peek_back(off);
+    }
     size_t pos;
     if (find_in_window(win, lim, inp, look_ahead, &pos)) {
-        *locn = off - pos;
-        *len = look_ahead;       
+        match_locn_ = lim - pos;        
+        match_len_ = look_ahead;       
         return true;
     }
     return false;

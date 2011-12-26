@@ -15,13 +15,10 @@ void decode_file(const char *input_path,
     shared_ptr<FileSource> src = make_shared<FileSource>(input_path);
     shared_ptr<FileSink> sink = make_shared<FileSink>(output_path);
     Decoder dec(src, sink);
-    src->open_file();
-    sink->open_file();
-    {
-        Timer timer("decode_file");
-        dec.decode();
-        sink->flush();
-    }
+    assert(src->open_file());
+    assert(sink->open_file());
+    Timer timer("decode_file");
+    dec.decode();
     src->close_file();
     sink->close_file();
 }

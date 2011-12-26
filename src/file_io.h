@@ -28,10 +28,11 @@ class FileSink : public Sink {
     virtual void append(const char *bytes, size_t n);
     virtual const char *peek_back(size_t offset) { return ptr_ - offset - 1; }
     virtual size_t pos() const { return gpos_; }
+
+    virtual void flush();
     
     bool open_file();
     bool close_file();
-    void flush();
     
     bool is_open() const { return fd_ != -1; }
     bool is_closed() const { return fd_ == -1; }

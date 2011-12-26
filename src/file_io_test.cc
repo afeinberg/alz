@@ -99,14 +99,12 @@ TEST_F(FileSinkTest, test_append_peek_back) {
     Encoder enc(encoder_src, encoder_sink_);
     enc.encode();
     enc.flush();
-    encoder_sink_->flush();
     decoder_in_ = slurp("encoded.dat", &decoder_in_size_);
     ASSERT_TRUE(decoder_in_ != NULL);
     auto decoder_src = make_shared<ByteArraySource>(decoder_in_,
                                                     decoder_in_size_);
     Decoder dec(decoder_src, decoder_sink_);
     dec.decode();
-    decoder_sink_->flush();
     size_t output_size;
     char *output = slurp("decoded.dat", &output_size);
     ASSERT_TRUE(output != NULL);
@@ -146,7 +144,6 @@ TEST_F(FileSourceTest, test_peek_peekback) {
     Encoder enc(encoder_source_, encoder_sink_);
     enc.encode();
     enc.flush();
-    encoder_sink_->flush();
     encoder_source_->close_file();    
     encoder_sink_->close_file();
     
@@ -154,7 +151,6 @@ TEST_F(FileSourceTest, test_peek_peekback) {
     decoder_sink_->open_file();
     Decoder dec(decoder_source_, decoder_sink_);
     dec.decode();
-    decoder_sink_->flush();
     decoder_sink_->close_file();
     decoder_source_->close_file();
     

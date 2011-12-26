@@ -20,6 +20,8 @@ class Sink {
     virtual void append(const char *bytes, size_t n) = 0;
     virtual const char *peek_back(size_t offset) = 0;
     virtual size_t pos() const = 0;
+
+    virtual void flush();
 };
 
 class Source {

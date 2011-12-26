@@ -30,7 +30,8 @@ namespace alz {
 #endif
 
 
-/* Return the first occurrence of NEEDLE in HAYSTACK. */
+// Note: this yielded a >100% improvement over the "naive way"
+
 inline void *memmem_opt (const void *haystack,
                          size_t haystack_len,
                          const void *needle,

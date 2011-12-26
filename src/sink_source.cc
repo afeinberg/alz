@@ -8,6 +8,8 @@ Sink::Sink() { }
 
 Sink::~Sink() { }
 
+void Sink::flush() { }
+
 Source::Source() { }
 
 Source::~Source() { }

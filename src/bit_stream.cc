@@ -10,9 +10,7 @@ InBitStream::InBitStream(const shared_ptr<Source> &src,
          buf_(NULL),
          pos_(0) { }
 
-InBitStream::~InBitStream() {
-    // delete [] buf_;
-}
+InBitStream::~InBitStream() { }
 
 OutBitStream::OutBitStream(const shared_ptr<Sink> &sink,
                            size_t buf_len)
