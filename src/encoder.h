@@ -73,49 +73,6 @@ inline void Encoder::output_byte() {
     src_->skip(1);
 }
 
-inline bool Encoder::find_match(const char *inp,
-                                size_t look_ahead,
-                                uint16_t *locn,
-                                uint8_t *len) {
-    size_t off;
-    size_t lim;
-    if (look_ahead > constants::kMaxLen) {
-        return false;
-    }
-    if (src_->pos() - 1 > constants::kMaxOffset) {
-        off = constants::kMaxOffset;
-        lim = constants::kMaxOffset;
-    } else {
-        off = src_->pos() - 1;
-        lim = src_->pos() - 1;        
-    }    
-    const char *win = src_->peek_back(off);
-    size_t pos;
-    if (find_in_window(win, lim, inp, look_ahead, &pos)) {
-        *locn = off - pos;
-        *len = look_ahead;       
-        return true;
-    }
-    return false;
-}
-    
-inline bool Encoder::find_in_window(const char *haystack,
-                                    size_t haystack_len,
-                                    const char *needle,
-                                    size_t needle_len,
-                                    size_t *needle_pos) {
-    const char *needle_found;
-    needle_found = static_cast<const char *>(memmem_opt((void *) haystack,
-                                                        haystack_len,
-                                                        (void *) needle,
-                                                        needle_len));
-    if (needle_found != NULL) {
-        *needle_pos = needle_found - haystack;
-        return true;
-    }
-    return false;
-}
-
 } // namespace alz
 
 #endif // ALZ_ENCODER_H_
