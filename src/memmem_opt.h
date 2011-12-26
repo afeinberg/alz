@@ -32,10 +32,10 @@ namespace alz {
 
 // Note: this yielded a >100% improvement over the "naive way"
 
-inline void *memmem_opt (const void *haystack,
-                         size_t haystack_len,
-                         const void *needle,
-                         size_t needle_len) {
+inline void *memmem_opt(const void *haystack,
+                        size_t haystack_len,
+                        const void *needle,
+                        size_t needle_len) {
     /* not really Rabin-Karp, just using additive hashing */
     char* haystack_ = (char*)haystack;
     char* needle_ = (char*)needle;
