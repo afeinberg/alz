@@ -1,0 +1,54 @@
+Quick explanation:
+
+* I only had a chance to test this under Linux. This will not work
+  under Windows, as I am making use of read()/write() directly.
+
+* To compile, run: 
+
+  cmake . && make
+
+  Output will be: alz_encode and alz_decode in ./src subdirectory
+
+  To compile unit tests, download and compile google-test (by running
+  cmake . && make in the google-test directory), and then run:
+
+  GTEST_ROOT=/path/to/gtest/ cmake .
+  make
+
+  To run the unit tests:
+  make test ;
+  # (from the root directory of the project)      
+  ./src/file_io_test # doesn't run by default as part of make_test, as it's
+                     #  more of an integration test
+
+  
+* I first wanted to make sure I implemented the algorithm correctly,
+  so I used Source/Sink abstractions (inspired by briefly reading
+  through Google snappy source code earlier) -- that allowed me to
+  first test everything using in-memory byte arrays
+
+* file_io.h / file_io.cc implements Source/Sink for files
+
+* bit_stream.h implements input / output bit streams which respect 
+  network byte order (by writing character by character) over the
+  Sink / Source abstractions
+
+* encoder.cc / encoder.h and decoder.cc / decoder.h should be self
+  explanatory 
+
+  Note on encoder:
+  
+  Currently encoding is significant slower than gzip (which implements the
+  lz77 algorithm). To stay true to the spirit of the puzzle, I *did not*
+  look at the gzip source.
+
+  Comments around the encode method explain how performance was
+  initially improved and how it could be further improved. 
+
+  As expected, callgrind reveals that most of the time is spent on
+  string matching. Using an efficiently hash table to store matches
+  should speed this up significantly. I am presently working on that.
+
+* memmem_opt.h contains an inlined, optimized matching algorithm
+
+        

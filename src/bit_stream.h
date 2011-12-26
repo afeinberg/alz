@@ -49,6 +49,8 @@ inline size_t InBitStream::available() const {
     return buf_bits_ - pos_ + src_->available() * 8;
 }
 
+// Borrowed from Bit Vector implementation in
+// C Interfaces and Implementations
 inline bool InBitStream::get_bit(size_t n) {
     assert(n < buf_bits_);
     return (buf_[n / 8] >> (n % 8)) & 1;
@@ -113,6 +115,8 @@ inline OutBitStream::OutBitStream(const shared_ptr<Sink> &sink,
     memset(buf_, 0, buf_len);
 }
 
+// Borrowed from Bit Vector implementation in
+// C Interfaces and Implementations
 inline void OutBitStream::put_bit(size_t n, bool bit) {
     if (bit) {
         buf_[n / 8] |= 1 << (n % 8);
