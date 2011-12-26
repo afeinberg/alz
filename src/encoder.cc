@@ -21,8 +21,8 @@ void Encoder::encode() {
         bool matched = false;
         bool looking = true;
         size_t look_ahead = kMinLookAhead;
-        uint16_t locn;
-        uint8_t len;
+        uint16_t locn = 0;
+        uint8_t len = 0;
         while (looking) {
             bool have_match = find_match(src_->peek(),
                                          look_ahead,

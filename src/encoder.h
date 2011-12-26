@@ -5,9 +5,12 @@
 
 #include <cstdint>
 #include <cstring>
+#include <cstdio>
 
+#include "util.h"
 #include "bit_stream.h"
 #include "constants.h"
+#include "memmem_opt.h"
 
 namespace alz {
 
@@ -27,10 +30,10 @@ inline bool find_in_window(const char *haystack,
                            size_t needle_len,
                            size_t *needle_pos) {
     const char *needle_found;
-    needle_found = static_cast<const char *>(memmem((void *) haystack,
-                                                    haystack_len,
-                                                    (void *) needle,
-                                                    needle_len));
+    needle_found = static_cast<const char *>(memmem_opt((void *) haystack,
+                                                        haystack_len,
+                                                        (void *) needle,
+                                                        needle_len));
     if (needle_found != NULL) {
         *needle_pos = needle_found - haystack;
         return true;
@@ -42,6 +45,13 @@ inline bool find_in_window(const char *haystack,
 
 using std::shared_ptr;
 
+struct Match {
+    const char *inp_;
+    size_t pos_;
+    uint16_t locn_;
+    uint8_t len_;
+};
+    
 class Encoder {
   public:
     Encoder(const shared_ptr<Source> &src,
@@ -109,12 +119,12 @@ inline bool Encoder::find_match(const char *inp,
     } else {
         off = src_->pos() - 1;
         lim = src_->pos() - 1;        
-    }
+    }    
     const char *win = src_->peek_back(off);
     size_t pos;
     if (internal::find_in_window(win, lim, inp, look_ahead, &pos)) {
         *locn = off - pos;
-        *len = look_ahead;
+        *len = look_ahead;       
         return true;
     }
     return false;
