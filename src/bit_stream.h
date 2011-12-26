@@ -19,8 +19,14 @@ static const int kDefaultBufLen = 8;
 class InBitStream {
   public:
     InBitStream(const shared_ptr<Source> &src,
-                size_t buf_len = kDefaultBufLen);
-    ~InBitStream();
+                size_t buf_len = kDefaultBufLen)
+        :src_(src),
+         buf_len_(buf_len),
+         buf_bits_(buf_len * 8),
+         buf_(NULL),
+         pos_(0) { }
+    
+    ~InBitStream() { }
 
     size_t available() const;
     
@@ -76,7 +82,8 @@ class OutBitStream {
   public:
     OutBitStream(const shared_ptr<Sink> &sink,
                  size_t buf_len = kDefaultBufLen);
-    ~OutBitStream();
+    
+    ~OutBitStream() { delete [] buf_; }
 
     void append(bool bit);
 
@@ -92,6 +99,16 @@ class OutBitStream {
     char *buf_;
     size_t pos_;
 };
+
+inline OutBitStream::OutBitStream(const shared_ptr<Sink> &sink,
+                                  size_t buf_len)
+        :sink_(sink),
+         buf_len_(buf_len),
+         buf_bits_(buf_len * 8),
+         buf_(new char[buf_len]),
+         pos_(0) {
+    memset(buf_, 0, buf_len);
+}
 
 inline void OutBitStream::put_bit(size_t n, bool bit) {
     if (bit) {
@@ -113,6 +130,12 @@ inline void OutBitStream::append_bits(IntType val) {
     for (int i = 0; i < NBits; ++i) {
         append((val >> i) & 1);
     }
+}
+
+inline void OutBitStream::flush() {
+    sink_->append(buf_, buf_len_);
+    memset(buf_, 0, buf_len_);
+    pos_ = 0;
 }
 
 

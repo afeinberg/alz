@@ -6,7 +6,9 @@
  * Note: since I want to be able to access the buffer, I am not
  * using conventional FILE or ifstream for this, I am sticking with
  * write()/read() system calls and doing my own buffering.
- *
+ * 
+ * Nonetheless, some double buffering still happens: I am not using
+ * direct I/O, so the pages do get loaded into the OS page cache.
  */
 
 #ifndef ALZ_FILE_IO_H_
