@@ -6,12 +6,28 @@ Encoder::Encoder(const shared_ptr<Source> &src,
                  const shared_ptr<Sink> &sink)
         :src_(src),
          sink_(sink),
-         outb_(sink_),
-         init_pos_(sink_->pos()) { }
+         outb_(sink_),         
+         init_pos_(sink_->pos()),
+         hash_tbl_(NULL),
+         hash_found_(0),
+         hash_not_found_(0) { }
 
-Encoder::~Encoder() { }
+Encoder::~Encoder() {
+    printf("hash_found = %d, hash_not_found = %d\n",
+           hash_found_,
+           hash_not_found_);
+    if (hash_tbl_ != NULL) {
+        delete [] hash_tbl_;
+    }
+}
+
+void Encoder::init_hash() {
+    hash_tbl_ = new size_t[kHashLen];
+    memset(hash_tbl_, 0, kHashLen);
+}
 
 void Encoder::encode() {
+    init_hash();
     output_byte();
     while (src_->available() > 0) {
         if(src_->available() < kMinLookAhead) {
@@ -66,9 +82,15 @@ void Encoder::flush() {
 // I used
 
 bool Encoder::find_match(const char *inp, size_t look_ahead) {
-    assert(look_ahead <= constants::kMaxLen);
+   
+    if (find_in_hash(inp, look_ahead)) {
+        hash_found_++;
+        return true;
+    }
+    
     size_t off;
     size_t lim;
+    
     if (src_->pos() - 1 > constants::kMaxOffset) {
         off = constants::kMaxOffset;
         lim = constants::kMaxOffset;
@@ -83,31 +105,56 @@ bool Encoder::find_match(const char *inp, size_t look_ahead) {
     } else {
         win = src_->peek_back(off);
     }
+
     size_t pos;
     if (find_in_window(win, lim, inp, look_ahead, &pos)) {
+        hash_not_found_++;
         match_locn_ = lim - pos;        
-        match_len_ = look_ahead;       
-        return true;
-    }
-    return false;
-}
-    
-bool Encoder::find_in_window(const char *haystack,
-                             size_t haystack_len,
-                             const char *needle,
-                             size_t needle_len,
-                             size_t *needle_pos) {
-    const char *needle_found;
-    needle_found = static_cast<const char *>(memmem_opt((void *) haystack,
-                                                        haystack_len,
-                                                        (void *) needle,
-                                                        needle_len));
-    if (needle_found != NULL) {
-        *needle_pos = needle_found - haystack;
+        match_len_ = look_ahead;
+        add_to_hash(inp, match_len_, match_locn_);
         return true;
     }
     return false;
 }
 
+bool Encoder::find_in_window(const char *haystack,
+                             size_t haystack_len,
+                             const char *needle,
+                             size_t needle_len,
+                             size_t *needle_pos) {
+    
+    const char *needle_found;
+    needle_found = static_cast<const char *>(memmem_opt((void *) haystack,
+                                                        haystack_len,
+                                                        (void *) needle,
+                                                        needle_len));
+    
+    if (needle_found != NULL) {
+        *needle_pos = needle_found - haystack;
+        return true;
+    } 
+    return false;
+}
+
+bool Encoder::find_in_hash(const char *inp, uint8_t len) {
+    size_t hash = hash_fn(inp, len);
+    size_t val = hash_tbl_[hash];
+    if (val == 0) {
+        return false;
+    }
+    size_t try_locn = src_->pos() - val;
+    if (try_locn > constants::kMaxOffset) {
+        hash_tbl_[hash] = 0;
+        return false;
+    } else {
+        if (memcmp(inp, src_->peek_back(try_locn), len) == 0) {
+            match_locn_ = try_locn;
+            match_len_ = len;
+            //DLOG("found");
+            return true;
+        }
+    }
+    return false;
+}
     
 } // namespace alz

@@ -37,13 +37,20 @@ class Encoder {
     // Flush out the rest of the buffer to source
     void flush();    
   private:
-    static const size_t kMinLookAhead = 3;
+    static const size_t kMinLookAhead = 2;
+    static const size_t kHashLen = 65536;
 
+    static size_t hash_fn(const char *inp, uint8_t len);
+    
     static bool find_in_window(const char *haystack,
                                size_t haystack_len,
                                const char *needle,
                                size_t needle_len,
-                               size_t *needle_pos);        
+                               size_t *needle_pos);
+    void init_hash();
+    void add_to_hash(const char *inp, uint8_t len, uint16_t locn);
+    bool find_in_hash(const char *inp, uint8_t len);
+    
     void output_byte();
     bool find_match(const char *inp,
                     size_t look_ahead);
@@ -55,8 +62,29 @@ class Encoder {
     bool matched_;
     uint16_t match_locn_;
     uint8_t match_len_;
+    size_t *hash_tbl_;
+    int hash_found_;
+    int hash_not_found_;
 };
-    
+
+/*
+inline size_t Encoder::hash_fn(const char *inp, uint8_t len)  {
+    size_t h = 5381; 
+    for (int i = 0; i < len; i++) {
+        h = (h << 5) + h + inp[i];
+    }
+    return h % (kHashLen - 1);
+    }
+*/
+
+inline size_t Encoder::hash_fn(const char *inp, uint8_t len)  {
+    size_t h = 5381; 
+    for (int i = 0; i < len; i++) {
+        h = ((h << 5) + h) ^ *inp++;
+    }
+    return h & (kHashLen - 1);
+}
+
 inline void Encoder::emit_literal(char byte) {
     outb_.append(false);
     outb_.append_bits<char, 8>(byte);
@@ -72,6 +100,11 @@ inline void Encoder::output_byte() {
     const char *byte = src_->peek();
     emit_literal(*byte);
     src_->skip(1);
+}
+
+inline void Encoder::add_to_hash(const char *inp, uint8_t len, uint16_t locn) {
+    size_t hash = hash_fn(inp, len);
+    hash_tbl_[hash] = src_->pos() - locn;    
 }
 
 } // namespace alz
