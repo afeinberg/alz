@@ -8,22 +8,20 @@ Encoder::Encoder(const shared_ptr<Source> &src,
          sink_(sink),
          outb_(sink_),         
          init_pos_(sink_->pos()),
-         hash_tbl_(NULL),
          hash_found_(0),
          hash_not_found_(0) { }
 
 Encoder::~Encoder() {
     printf("hash_found = %d, hash_not_found = %d\n",
            hash_found_,
-           hash_not_found_);
-    if (hash_tbl_ != NULL) {
-        delete [] hash_tbl_;
-    }
+           hash_not_found_);    
 }
 
-void Encoder::init_hash() {
-    hash_tbl_ = new size_t[kHashLen];
-    memset(hash_tbl_, 0, kHashLen);
+void Encoder::init_hash() {    
+    hash_tbl_.reserve(kHashLen);
+    std::fill(hash_tbl_.begin(),
+              hash_tbl_.end(),
+              pair<size_t, uint8_t>(0, 0));
 }
 
 void Encoder::encode() {
@@ -124,11 +122,10 @@ bool Encoder::find_in_window(const char *haystack,
                              size_t *needle_pos) {
     
     const char *needle_found;
-    needle_found = static_cast<const char *>(memmem_opt((void *) haystack,
+    needle_found = static_cast<const char *>(rabin_karp(haystack,
                                                         haystack_len,
-                                                        (void *) needle,
-                                                        needle_len));
-    
+                                                        needle,
+                                                        needle_len));    
     if (needle_found != NULL) {
         *needle_pos = needle_found - haystack;
         return true;
@@ -138,16 +135,17 @@ bool Encoder::find_in_window(const char *haystack,
 
 bool Encoder::find_in_hash(const char *inp, uint8_t len) {
     size_t hash = hash_fn(inp, len);
-    size_t val = hash_tbl_[hash];
-    if (val == 0) {
+    pair<size_t, uint8_t> val = hash_tbl_[hash];
+    if (val.second == 0) {
         return false;
     }
-    size_t try_locn = src_->pos() - val;
+    size_t try_locn = src_->pos() - val.first;
     if (try_locn > constants::kMaxOffset) {
-        hash_tbl_[hash] = 0;
+        hash_tbl_[hash] = pair<size_t, uint8_t>(0, 0);
         return false;
     } else {
-        if (memcmp(inp, src_->peek_back(try_locn), len) == 0) {
+        if ((val.second == len) &&
+            (memcmp(inp, src_->peek_back(try_locn), len) == 0)) {
             match_locn_ = try_locn;
             match_len_ = len;
             //DLOG("found");

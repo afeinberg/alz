@@ -7,6 +7,9 @@
 #include <cstring>
 #include <cstdio>
 
+#include <vector>
+#include <algorithm>
+
 #include "util.h"
 #include "bit_stream.h"
 #include "constants.h"
@@ -15,7 +18,11 @@
 namespace alz {
 
 using std::shared_ptr;
-    
+using std::vector;
+using std::pair;
+
+typedef vector<pair<size_t, uint8_t> > HashTbl;
+
 class Encoder {
   public:
     Encoder(const shared_ptr<Source> &src,
@@ -62,25 +69,17 @@ class Encoder {
     bool matched_;
     uint16_t match_locn_;
     uint8_t match_len_;
-    size_t *hash_tbl_;
+    HashTbl hash_tbl_;
     int hash_found_;
     int hash_not_found_;
 };
 
-/*
-inline size_t Encoder::hash_fn(const char *inp, uint8_t len)  {
-    size_t h = 5381; 
-    for (int i = 0; i < len; i++) {
-        h = (h << 5) + h + inp[i];
-    }
-    return h % (kHashLen - 1);
-    }
-*/
 
 inline size_t Encoder::hash_fn(const char *inp, uint8_t len)  {
-    size_t h = 5381; 
-    for (int i = 0; i < len; i++) {
-        h = ((h << 5) + h) ^ *inp++;
+    size_t h = 5381;
+    const char *last = inp + len;
+    for ( ; inp < last; ++inp) {
+        h = ((h << 5) + h) ^ *inp;
     }
     return h & (kHashLen - 1);
 }
@@ -104,7 +103,7 @@ inline void Encoder::output_byte() {
 
 inline void Encoder::add_to_hash(const char *inp, uint8_t len, uint16_t locn) {
     size_t hash = hash_fn(inp, len);
-    hash_tbl_[hash] = src_->pos() - locn;    
+    hash_tbl_[hash] = pair<size_t, uint8_t>(src_->pos() - locn, len);
 }
 
 } // namespace alz

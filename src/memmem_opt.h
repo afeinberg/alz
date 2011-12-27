@@ -20,8 +20,8 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
    02111-1307 USA.  */
 
-#include <stddef.h>
-#include <string.h>
+#include <cstddef>
+#include <cstring>
 
 namespace alz {
 
@@ -32,13 +32,13 @@ namespace alz {
 
 // Note: this yielded a >100% improvement over the "naive way"
 
-inline void *memmem_opt(const void *haystack,
+inline void *rabin_karp(const char *haystack,
                         size_t haystack_len,
-                        const void *needle,
+                        const char *needle,
                         size_t needle_len) {
     /* not really Rabin-Karp, just using additive hashing */
-    char* haystack_ = (char*)haystack;
-    char* needle_ = (char*)needle;
+    char* haystack_ = (char *) haystack;
+    char* needle_ = (char *) needle;
     int hash = 0;		/* this is the static hash value of the needle */
     int hay_hash = 0;	/* rolling hash over the haystack */
     char* last;
@@ -58,8 +58,8 @@ inline void *memmem_opt(const void *haystack,
     }
 
     /* iterate over the haystack */
-    haystack_ = (char*)haystack;
-    needle_ = (char*)needle;
+    haystack_ = (char *) haystack;
+    needle_ = (char *) needle;
     last = haystack_+(haystack_len - needle_len + 1);
     for (; haystack_ < last; ++haystack_)
     {
