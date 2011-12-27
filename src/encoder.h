@@ -45,7 +45,7 @@ class Encoder {
     void flush();    
   private:
     static const size_t kMinLookAhead = 2;
-    static const size_t kHashLen = 65536;
+    static const size_t kHashLen = 16384;
 
     static size_t hash_fn(const char *inp, uint8_t len);
     
@@ -70,8 +70,10 @@ class Encoder {
     uint16_t match_locn_;
     uint8_t match_len_;
     HashTbl hash_tbl_;
+#ifdef ALZ_DEBUG_
     int hash_found_;
     int hash_not_found_;
+#endif // ALZ_DEBUG_
 };
 
 

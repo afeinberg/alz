@@ -29,13 +29,10 @@ namespace alz {
 # define __builtin_expect(expr, val)   (expr)
 #endif
 
-
-// Note: this yielded a >100% improvement over the "naive way"
-
-inline void *rabin_karp(const char *haystack,
-                        size_t haystack_len,
-                        const char *needle,
-                        size_t needle_len) {
+inline void *rolling_hash(const char *haystack,
+                          size_t haystack_len,
+                          const char *needle,
+                          size_t needle_len) {
     /* not really Rabin-Karp, just using additive hashing */
     char* haystack_ = (char *) haystack;
     char* needle_ = (char *) needle;

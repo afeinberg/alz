@@ -7,17 +7,25 @@ Encoder::Encoder(const shared_ptr<Source> &src,
         :src_(src),
          sink_(sink),
          outb_(sink_),         
-         init_pos_(sink_->pos()),
-         hash_found_(0),
-         hash_not_found_(0) { }
+         init_pos_(sink_->pos()) { }
 
 Encoder::~Encoder() {
+    
+#ifdef ALZ_DEBUG_
     printf("hash_found = %d, hash_not_found = %d\n",
            hash_found_,
-           hash_not_found_);    
+           hash_not_found_);
+#endif // ALZ_DEBUG_
+    
 }
 
-void Encoder::init_hash() {    
+void Encoder::init_hash() {
+    
+#ifdef ALZ_DEBUG_
+    hash_found_ = 0;
+    hash_not_found_ = 0;
+#endif // ALZ_DEBUG_
+    
     hash_tbl_.reserve(kHashLen);
     std::fill(hash_tbl_.begin(),
               hash_tbl_.end(),
@@ -74,7 +82,7 @@ void Encoder::flush() {
 // a custom hash and equals functor) had high overhead in this case
 // (due to allocations being done under the covers).
 //
-// Using a "Rabin-Karp"-style approach (see memmem_opt.h) vs. naively
+// Using a "Rolling-hash"-style approach (see memmem_opt.h) vs. naively
 // searching through the window _did_ yield a significant speed up vs.
 // the previous naive way (which essentially implemented memmem()) that
 // I used
@@ -82,7 +90,11 @@ void Encoder::flush() {
 bool Encoder::find_match(const char *inp, size_t look_ahead) {
    
     if (find_in_hash(inp, look_ahead)) {
+        
+#ifdef ALZ_DEBUG_
         hash_found_++;
+#endif // ALZ_DEBUG_
+        
         return true;
     }
     
@@ -106,7 +118,11 @@ bool Encoder::find_match(const char *inp, size_t look_ahead) {
 
     size_t pos;
     if (find_in_window(win, lim, inp, look_ahead, &pos)) {
+        
+#ifdef ALZ_DEBUG_
         hash_not_found_++;
+#endif // ALZ_DEBUG_
+        
         match_locn_ = lim - pos;        
         match_len_ = look_ahead;
         add_to_hash(inp, match_len_, match_locn_);
@@ -122,10 +138,10 @@ bool Encoder::find_in_window(const char *haystack,
                              size_t *needle_pos) {
     
     const char *needle_found;
-    needle_found = static_cast<const char *>(rabin_karp(haystack,
-                                                        haystack_len,
-                                                        needle,
-                                                        needle_len));    
+    needle_found = static_cast<const char *>(rolling_hash(haystack,
+                                                          haystack_len,
+                                                          needle,
+                                                          needle_len));    
     if (needle_found != NULL) {
         *needle_pos = needle_found - haystack;
         return true;
@@ -144,7 +160,7 @@ bool Encoder::find_in_hash(const char *inp, uint8_t len) {
         hash_tbl_[hash] = pair<size_t, uint8_t>(0, 0);
         return false;
     } else {
-        if ((val.second == len) &&
+        if ((val.second >= len) &&
             (memcmp(inp, src_->peek_back(try_locn), len) == 0)) {
             match_locn_ = try_locn;
             match_len_ = len;
