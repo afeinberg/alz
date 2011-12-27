@@ -74,18 +74,6 @@ void Encoder::flush() {
 
 
 // NOTE: *** This is slow ***
-// The significant way to speed this up is by using a hash table
-// and ignoring any hits in the hash table outside of the current
-// window.
-// 
-// However, a naive approach (using std::unordered_map with
-// a custom hash and equals functor) had high overhead in this case
-// (due to allocations being done under the covers).
-//
-// Using a "Rolling-hash"-style approach (see memmem_opt.h) vs. naively
-// searching through the window _did_ yield a significant speed up vs.
-// the previous naive way (which essentially implemented memmem()) that
-// I used
 
 bool Encoder::find_match(const char *inp, size_t look_ahead) {
    
