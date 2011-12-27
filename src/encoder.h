@@ -10,6 +10,8 @@
 #include <vector>
 #include <algorithm>
 
+#include <boost/pool/pool.hpp>
+
 #include "util.h"
 #include "bit_stream.h"
 #include "constants.h"
@@ -19,9 +21,14 @@ namespace alz {
 
 using std::shared_ptr;
 using std::vector;
-using std::pair;
 
-typedef vector<pair<size_t, uint8_t> > HashTbl;
+struct HashNode {
+    HashNode *next_;
+    size_t pos_;
+    uint8_t len_;
+};
+
+typedef vector<HashNode *> HashTbl;
 
 class Encoder {
   public:
@@ -70,6 +77,7 @@ class Encoder {
     uint16_t match_locn_;
     uint8_t match_len_;
     HashTbl hash_tbl_;
+    boost::pool<> pool_;
 #ifdef ALZ_DEBUG_
     int hash_found_;
     int hash_not_found_;
@@ -105,7 +113,16 @@ inline void Encoder::output_byte() {
 
 inline void Encoder::add_to_hash(const char *inp, uint8_t len, uint16_t locn) {
     size_t hash = hash_fn(inp, len);
-    hash_tbl_[hash] = pair<size_t, uint8_t>(src_->pos() - locn, len);
+    HashNode *new_node = (HashNode *) pool_.malloc();
+    assert(new_node != NULL);
+    new_node->pos_ = src_->pos() - locn;
+    new_node->len_ = len;
+    if (hash_tbl_[hash] != NULL) {
+        new_node->next_ = hash_tbl_[hash];
+    } else {
+        new_node->next_ = NULL;
+    }
+    hash_tbl_[hash] = new_node;
 }
 
 } // namespace alz

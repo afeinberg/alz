@@ -7,7 +7,8 @@ Encoder::Encoder(const shared_ptr<Source> &src,
         :src_(src),
          sink_(sink),
          outb_(sink_),         
-         init_pos_(sink_->pos()) { }
+         init_pos_(sink_->pos()),
+         pool_(sizeof(HashNode)) { }
 
 Encoder::~Encoder() {
     
@@ -29,7 +30,7 @@ void Encoder::init_hash() {
     hash_tbl_.reserve(kHashLen);
     std::fill(hash_tbl_.begin(),
               hash_tbl_.end(),
-              pair<size_t, uint8_t>(0, 0));
+              (HashNode *)NULL);
 }
 
 void Encoder::encode() {
@@ -139,16 +140,22 @@ bool Encoder::find_in_window(const char *haystack,
 
 bool Encoder::find_in_hash(const char *inp, uint8_t len) {
     size_t hash = hash_fn(inp, len);
-    pair<size_t, uint8_t> val = hash_tbl_[hash];
-    if (val.second == 0) {
+    HashNode *list = hash_tbl_[hash];
+    if (list == NULL) {
         return false;
     }
-    size_t try_locn = src_->pos() - val.first;
-    if (try_locn > constants::kMaxOffset) {
-        hash_tbl_[hash] = pair<size_t, uint8_t>(0, 0);
-        return false;
-    } else {
-        if ((val.second >= len) &&
+    HashNode *prev = list;
+    for (HashNode *node = list; node != NULL; prev = node, node = node->next_) {
+        size_t try_locn = src_->pos() - node->pos_;
+        if (try_locn > constants::kMaxOffset) {
+            if (prev != NULL) {
+                prev->next_ = node->next_;
+            } else {
+                hash_tbl_[hash] = node->next_;
+            }
+            continue;
+        }
+        if ((node->len_ >= len) &&
             (memcmp(inp, src_->peek_back(try_locn), len) == 0)) {
             match_locn_ = try_locn;
             match_len_ = len;
