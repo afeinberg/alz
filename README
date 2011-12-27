@@ -21,7 +21,21 @@ Quick explanation:
   ./src/file_io_test # doesn't run by default as part of make_test, as it's
                      #  more of an integration test
 
+* Note: compilation speed could be improved by creating a separate
+  library and then (statically) linking both the executable and the
+  unit tests against that library. This is what I've done with
+  previous personal projects where I've used CMAke, e.g.,
+  https://github.com/afeinberg/af-concurrent-cc
   
+  Another substantial improvement in compilation speed would be to use
+  less inlining, but it would come at the cost of performance (especially
+  in the string matching code and bit extraction code, which gets called
+  many times in a loop) as some tests I've done showed.
+  
+  Initially I thought just -O3 would suffice to unroll the loops, but
+  I found very substantial (20-30%) improvement when I passed the
+  -funroll-loops flag explicitly (together with -O3).
+
 * I first wanted to make sure I implemented the algorithm correctly,
   so I used Source/Sink abstractions (inspired by briefly reading
   through Google snappy source code earlier) -- that allowed me to
@@ -37,22 +51,45 @@ Quick explanation:
   loops. I am also using templates to specify types and bit counts
   once in both InBitStream and OutBitStream, as to allow the compiler
   to unroll the loops within those methods.
+
+  As you may note, OutBitStream does modifications on a buffer that is
+  then (via the Sink abstraction) memcpy'd out to yet another buffer
+  which is then written to disk via write(). My first hunch was to
+  optimize this further by having the OutBitStream operate directly on
+  the buffer (like InBitStream does), however, I found that this
+  yielded little performance difference (especially since this is far
+  from the bottleneck in the encoder).
   
 * encoder.cc / encoder.h and decoder.cc / decoder.h should be self
   explanatory 
 
-  Note on encoder:
+  Note on encoder.cc / encoder.h:
   
-  Currently encoding is significant slower than gzip (which implements the
-  lz77 algorithm). To stay true to the spirit of the puzzle, I *did not*
-  look at the gzip source.
-
-  Comments around the encode method explain how performance was
-  initially improved and how it could be further improved. 
+  Currently encoding is significant slower than gzip (which implements
+  the lz77 algorithm). To stay true to the spirit of the puzzle, I
+  *did not* look at the gzip source until much later (after being told
+  by Glen that this is something I could do). Comments around the
+  encode method explain how performance was initially improved and how
+  it could be further improved.
 
   As expected, callgrind reveals that most of the time is spent on
-  string matching. Using an efficiently hash table to store matches
-  should speed this up significantly. I am presently working on that.
+  string matching. 
+
+  decoder performance is much faster than encoder, but still ~3 times
+  slower than gzip. Looking at profiler output, most of the time is
+  spent on bit manipulation (essentially, a part of the algorithm) and
+  a smaller (but not insignificant portion) is spent on memcpy().
+
+  Possible optimizations using a more clever bit operation to extract
+  the 16-bits containing the offset and length. This would likely mean
+  the code would operate on word rather byte pointers, in which case
+  it would need extract handling to deal with endianness issues (e.g.,
+  writing a magic number to indicate the endian order, or additional
+  bit manipulations to re-arrange bytes within a word).
+
+  Another possible optimization would be to avoid the use of memcpy:
+  instead, to write out matches, we'd simply write() to the file
+  directly from the buffer starting from the location of the match.
 
 * memmem_opt.h contains an inlined, optimized matching algorithm
 
