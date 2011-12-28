@@ -45,7 +45,7 @@ class Encoder {
     void flush();    
   private:
     static const size_t kMinLookAhead = 2;
-    static const size_t kHashLen = 16384;
+    static const size_t kHashLen = 524288;
 
     static size_t hash_fn(const char *inp, uint8_t len);
     
@@ -105,9 +105,12 @@ inline void Encoder::output_byte() {
 
 inline void Encoder::add_to_hash(const char *inp, uint8_t len, uint16_t locn) {
     size_t hash = hash_fn(inp, len);
-    hash_tbl_[hash] = pair<size_t, uint8_t>(src_->pos() - locn, len);
+    pair<size_t, uint8_t> &m = hash_tbl_[hash];
+    m.first = src_->pos() - locn;
+    m.second = len;
 }
 
+    
 } // namespace alz
 
 #endif // ALZ_ENCODER_H_

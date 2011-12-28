@@ -32,6 +32,28 @@ void Encoder::init_hash() {
               pair<size_t, uint8_t>(0, 0));
 }
 
+bool Encoder::find_in_hash(const char *inp, uint8_t len) {
+    size_t hash = hash_fn(inp, len);
+    pair<size_t, uint8_t> &val = hash_tbl_[hash];
+    if (val.second == 0) {
+        return false;
+    }
+    size_t try_locn = src_->pos() - val.first;
+    if (try_locn > constants::kMaxOffset) {
+        hash_tbl_[hash].second = 0;
+        return false;
+    } else {
+        if ((val.second >= len) &&
+            (memcmp(inp, src_->peek_back(try_locn), len) == 0)) {
+            match_locn_ = try_locn;
+            match_len_ = len;
+            //DLOG("found");
+            return true;
+        }
+    }
+    return false;
+}
+    
 void Encoder::encode() {
     init_hash();
     output_byte();
@@ -49,17 +71,18 @@ void Encoder::encode() {
             bool have_match = find_match(src_->peek(), look_ahead);
             if (!have_match) {
                 looking = false;
+                add_to_hash(src_->peek(), look_ahead, 1);
             } else {
                 matched_ = true;
                 if (src_->available() > look_ahead) {
                     look_ahead++;
                 } else {
-                    looking = false;
+                    looking = false;                    
                 }
             }
         }
         if (!matched_) {
-            output_byte();
+            output_byte();            
         } else {
             emit_compressed(match_locn_, match_len_);
             src_->skip(match_len_);
@@ -186,28 +209,6 @@ bool Encoder::find_in_window(const char *haystack,
         *needle_pos = needle_found - haystack;
         return true;
     } 
-    return false;
-}
-
-bool Encoder::find_in_hash(const char *inp, uint8_t len) {
-    size_t hash = hash_fn(inp, len);
-    pair<size_t, uint8_t> val = hash_tbl_[hash];
-    if (val.second == 0) {
-        return false;
-    }
-    size_t try_locn = src_->pos() - val.first;
-    if (try_locn > constants::kMaxOffset) {
-        hash_tbl_[hash] = pair<size_t, uint8_t>(0, 0);
-        return false;
-    } else {
-        if ((val.second >= len) &&
-            (memcmp(inp, src_->peek_back(try_locn), len) == 0)) {
-            match_locn_ = try_locn;
-            match_len_ = len;
-            //DLOG("found");
-            return true;
-        }
-    }
     return false;
 }
     
