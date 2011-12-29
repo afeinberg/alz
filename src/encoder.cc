@@ -7,7 +7,9 @@ Encoder::Encoder(const shared_ptr<Source> &src,
         :src_(src),
          sink_(sink),
          outb_(sink_),         
-         init_pos_(sink_->pos()) { }
+         init_pos_(sink_->pos()),
+         hash_tbl_(NULL),
+         pool_(sizeof(HashNode)) { }
 
 Encoder::~Encoder() {
     
@@ -16,7 +18,13 @@ Encoder::~Encoder() {
            hash_found_,
            hash_not_found_);
 #endif // ALZ_DEBUG_
-    
+
+    if (hash_tbl_ != NULL) {
+        // Note: there's no need to free the individual
+        // lists as the pool allocator takes care of that
+        // when its destructor is called.
+        delete [] hash_tbl_;
+    }
 }
 
 void Encoder::init_hash() {
@@ -26,30 +34,42 @@ void Encoder::init_hash() {
     hash_not_found_ = 0;
 #endif // ALZ_DEBUG_
     
-    hash_tbl_.reserve(kHashLen);
-    std::fill(hash_tbl_.begin(),
-              hash_tbl_.end(),
-              pair<size_t, uint8_t>(0, 0));
+    hash_tbl_ = new HashNode*[kHashLen];
+    memset(hash_tbl_, 0, kHashLen);
 }
 
 bool Encoder::find_in_hash(const char *inp, uint8_t len) {
     size_t hash = hash_fn(inp, len);
-    pair<size_t, uint8_t> &val = hash_tbl_[hash];
-    if (val.second == 0) {
+    HashNode *list = hash_tbl_[hash];
+    if (list == NULL) {
         return false;
     }
-    size_t try_locn = src_->pos() - val.first;
-    if (try_locn > constants::kMaxOffset) {
-        hash_tbl_[hash].second = 0;
-        return false;
-    } else {
-        if ((val.second >= len) &&
-            (memcmp(inp, src_->peek_back(try_locn), len) == 0)) {
-            match_locn_ = try_locn;
-            match_len_ = len;
-            //DLOG("found");
-            return true;
+    HashNode *prev = NULL;
+    HashNode *node = list;
+    while (node != NULL) {
+        size_t try_locn = src_->pos() - node->pos_;
+        if (try_locn > constants::kMaxOffset) {
+            if (prev != NULL) {
+                prev->next_ = node->next_;
+                free_node(node);
+                node = prev->next_;
+            } else {
+                hash_tbl_[hash] = node->next_;
+                free_node(node);
+                node = hash_tbl_[hash];                
+            }
+            continue;
+        } else {
+            if ((node->len_ >= len) &&
+                (memcmp(inp, src_->peek_back(try_locn), len) == 0)) {
+                match_locn_ = try_locn;
+                match_len_ = len;
+                //DLOG("found");
+                return true;
+            }
         }
+        prev = node;
+        node = node->next_;
     }
     return false;
 }

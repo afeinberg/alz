@@ -10,6 +10,8 @@
 #include <vector>
 #include <algorithm>
 
+#include <boost/pool/pool.hpp>
+
 #include "util.h"
 #include "bit_stream.h"
 #include "constants.h"
@@ -21,7 +23,11 @@ using std::shared_ptr;
 using std::vector;
 using std::pair;
 
-typedef vector<pair<size_t, uint8_t> > HashTbl;
+struct HashNode {
+    HashNode *next_;
+    size_t pos_;
+    uint8_t len_;
+};
 
 class Encoder {
   public:
@@ -61,6 +67,11 @@ class Encoder {
     void output_byte();
     bool find_match(const char *inp,
                     size_t look_ahead);
+
+    // Separate functions to let me experiment with using
+    // malloc/free vs. using a memory pool
+    HashNode *alloc_node();
+    void free_node(HashNode *node);
     
     shared_ptr<Source> src_;
     shared_ptr<Sink> sink_;    
@@ -69,13 +80,25 @@ class Encoder {
     bool matched_;
     uint16_t match_locn_;
     uint8_t match_len_;
-    HashTbl hash_tbl_;
+    HashNode **hash_tbl_;
+    boost::pool<> pool_;
 #ifdef ALZ_DEBUG_
     int hash_found_;
     int hash_not_found_;
 #endif // ALZ_DEBUG_
 };
 
+
+inline HashNode *Encoder::alloc_node() {
+    HashNode *ret = (HashNode *) pool_.malloc();
+    assert(ret != NULL);
+    return ret;    
+}
+
+inline void Encoder::free_node(HashNode *node) {
+    assert(node != NULL);
+    pool_.free(node);
+}
 
 inline size_t Encoder::hash_fn(const char *inp, uint8_t len)  {
     size_t h = 5381;
@@ -105,9 +128,11 @@ inline void Encoder::output_byte() {
 
 inline void Encoder::add_to_hash(const char *inp, uint8_t len, uint16_t locn) {
     size_t hash = hash_fn(inp, len);
-    pair<size_t, uint8_t> &m = hash_tbl_[hash];
-    m.first = src_->pos() - locn;
-    m.second = len;
+    HashNode *new_node = alloc_node();
+    new_node->len_ = len;
+    new_node->pos_ = src_->pos() - locn;
+    new_node->next_ = hash_tbl_[hash];
+    hash_tbl_[hash] = new_node;
 }
 
     
