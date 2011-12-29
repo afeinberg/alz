@@ -50,18 +50,13 @@ class Encoder {
     // Flush out the rest of the buffer to source
     void flush();    
   private:
-    static const size_t kMinLookAhead = 2;
+    static const size_t kMinLookAhead = 3;
     static const size_t kHashLen = 16384;
 
     static size_t hash_fn(const char *inp, uint8_t len);
-    
-    static bool find_in_window(const char *haystack,
-                               size_t haystack_len,
-                               const char *needle,
-                               size_t needle_len,
-                               size_t *needle_pos);
+  
     void init_hash();
-    void add_to_hash(const char *inp, uint8_t len, uint16_t locn);
+    void add_to_hash(const char *inp, uint8_t len);
     bool find_in_hash(const char *inp, uint8_t len);
     
     void output_byte();
@@ -82,10 +77,8 @@ class Encoder {
     uint8_t match_len_;
     HashNode **hash_tbl_;
     boost::pool<> pool_;
-#ifdef ALZ_DEBUG_
-    int hash_found_;
-    int hash_not_found_;
-#endif // ALZ_DEBUG_
+    size_t added_;
+    size_t found_;
 };
 
 
@@ -100,13 +93,14 @@ inline void Encoder::free_node(HashNode *node) {
     pool_.free(node);
 }
 
-inline size_t Encoder::hash_fn(const char *inp, uint8_t len)  {
-    size_t h = 5381;
-    const char *last = inp + len;
+inline size_t Encoder::hash_fn(const char *inp, uint8_t /*len*/)  {
+    const char *last = inp + kMinLookAhead;
+    size_t h = 0;
     for ( ; inp < last; ++inp) {
-        h = ((h << 5) + h) ^ *inp;
+        h = (h << 5) ^ *inp;
+        h %= kHashLen;
     }
-    return h & (kHashLen - 1);
+    return h;
 }
 
 inline void Encoder::emit_literal(char byte) {
@@ -126,11 +120,11 @@ inline void Encoder::output_byte() {
     src_->skip(1);
 }
 
-inline void Encoder::add_to_hash(const char *inp, uint8_t len, uint16_t locn) {
+inline void Encoder::add_to_hash(const char *inp, uint8_t len) {
     size_t hash = hash_fn(inp, len);
     HashNode *new_node = alloc_node();
     new_node->len_ = len;
-    new_node->pos_ = src_->pos() - locn;
+    new_node->pos_ = src_->pos() + 1;
     new_node->next_ = hash_tbl_[hash];
     hash_tbl_[hash] = new_node;
 }
