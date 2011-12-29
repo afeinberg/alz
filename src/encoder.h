@@ -15,7 +15,6 @@
 #include "util.h"
 #include "bit_stream.h"
 #include "constants.h"
-#include "memmem_opt.h"
 
 namespace alz {
 
@@ -50,35 +49,31 @@ class Encoder {
     // Flush out the rest of the buffer to source
     void flush();    
   private:
-    static const size_t kMinLookAhead = 3;
+    static const size_t kMinLookAhead = 4;
     static const size_t kHashLen = 16384;
-
-    static size_t hash_fn(const char *inp, uint8_t len);
-  
-    void init_hash();
-    void add_to_hash(const char *inp, uint8_t len);
-    bool find_in_hash(const char *inp, uint8_t len);
-    
-    void output_byte();
-    bool find_match(const char *inp,
-                    size_t look_ahead);
 
     // Separate functions to let me experiment with using
     // malloc/free vs. using a memory pool
     HashNode *alloc_node();
     void free_node(HashNode *node);
+    static size_t hash_fn(const char *inp, uint8_t len);    
+    void init_hash();
+    void add_to_hash(const char *inp, uint8_t len);
+    bool find_in_hash(const char *inp, uint8_t len, uint16_t *match_locn);
+    
+    void output_byte();
     
     shared_ptr<Source> src_;
     shared_ptr<Sink> sink_;    
     OutBitStream outb_;
     size_t init_pos_;
     bool matched_;
-    uint16_t match_locn_;
-    uint8_t match_len_;
     HashNode **hash_tbl_;
     boost::pool<> pool_;
+#ifdef ALZ_DEBUG_
     size_t added_;
     size_t found_;
+#endif // ALZ_DEBUG_
 };
 
 
@@ -93,14 +88,13 @@ inline void Encoder::free_node(HashNode *node) {
     pool_.free(node);
 }
 
-inline size_t Encoder::hash_fn(const char *inp, uint8_t /*len*/)  {
-    const char *last = inp + kMinLookAhead;
-    size_t h = 0;
+inline size_t Encoder::hash_fn(const char *inp, uint8_t len)  {
+    size_t h = 5381;
+    const char *last = inp + len;
     for ( ; inp < last; ++inp) {
-        h = (h << 5) ^ *inp;
-        h %= kHashLen;
+        h = ((h << 5) + h) ^ *inp;
     }
-    return h;
+    return h & (kHashLen - 1);
 }
 
 inline void Encoder::emit_literal(char byte) {

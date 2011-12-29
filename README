@@ -63,34 +63,4 @@ Quick explanation:
 * encoder.cc / encoder.h and decoder.cc / decoder.h should be self
   explanatory 
 
-  Note on encoder.cc / encoder.h:
-  
-  Currently encoding is significant slower than gzip (which implements
-  the lz77 algorithm). To stay true to the spirit of the puzzle, I
-  *did not* look at the gzip source until much later (after being told
-  by Glen that this is something I could do). Comments around the
-  encode method explain how performance was initially improved and how
-  it could be further improved.
-
-  As expected, callgrind reveals that most of the time is spent on
-  string matching. 
-
-  decoder performance is much faster than encoder, but still ~3 times
-  slower than gzip. Looking at profiler output, most of the time is
-  spent on bit manipulation (essentially, a part of the algorithm) and
-  a smaller (but not insignificant portion) is spent on memcpy().
-
-  Possible optimizations using a more clever bit operation to extract
-  the 16-bits containing the offset and length. This would likely mean
-  the code would operate on word rather byte pointers, in which case
-  it would need extract handling to deal with endianness issues (e.g.,
-  writing a magic number to indicate the endian order, or additional
-  bit manipulations to re-arrange bytes within a word).
-
-  Another possible optimization would be to avoid the use of memcpy:
-  instead, to write out matches, we'd simply write() to the file
-  directly from the buffer starting from the location of the match.
-
-* memmem_opt.h contains an inlined, optimized matching algorithm
-
         

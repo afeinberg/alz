@@ -98,7 +98,6 @@ TEST_F(FileSinkTest, test_append_peek_back) {
                                                     encoder_in_size_);
     Encoder enc(encoder_src, encoder_sink_);
     enc.encode();
-    enc.flush();
     decoder_in_ = slurp("encoded.dat", &decoder_in_size_);
     ASSERT_TRUE(decoder_in_ != NULL);
     auto decoder_src = make_shared<ByteArraySource>(decoder_in_,
@@ -143,7 +142,6 @@ TEST_F(FileSourceTest, test_peek_peekback) {
     encoder_sink_->open_file();
     Encoder enc(encoder_source_, encoder_sink_);
     enc.encode();
-    enc.flush();
     encoder_source_->close_file();    
     encoder_sink_->close_file();
     

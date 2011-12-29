@@ -12,7 +12,9 @@ Encoder::Encoder(const shared_ptr<Source> &src,
          pool_(sizeof(HashNode)) { }
 
 Encoder::~Encoder() {
+#ifdef ALZ_DEBUG_
     printf("added = %ld, found=%ld\n", added_, found_);
+#endif // ALZ_DEBUG_
     if (hash_tbl_ != NULL) {
         // Note: there's no need to free the individual
         // lists as the pool allocator takes care of that
@@ -22,13 +24,17 @@ Encoder::~Encoder() {
 }
 
 void Encoder::init_hash() {
+#ifdef ALZ_DEBUG_
     added_  = 0;
     found_ = 0;
+#endif // ALZ_DEBUG_
     hash_tbl_ = new HashNode*[kHashLen];
     memset(hash_tbl_, 0, kHashLen);
 }
 
-bool Encoder::find_in_hash(const char *inp, uint8_t len) {
+inline bool Encoder::find_in_hash(const char *inp,
+                                  uint8_t len,
+                                  uint16_t *match_locn) {
     size_t hash = hash_fn(inp, len);
     HashNode *list = hash_tbl_[hash];
     if (list == NULL) {
@@ -41,12 +47,17 @@ bool Encoder::find_in_hash(const char *inp, uint8_t len) {
         if (try_locn >= constants::kMaxOffset) {
             if (prev != NULL) {
                 prev->next_ = node->next_;
+                free_node(node);
                 node = prev->next_;
             } else {
                 if (node->next_) {
                     hash_tbl_[hash] = node->next_;
+                    free_node(node);
                     node = hash_tbl_[hash]->next_;
                     prev = hash_tbl_[hash];
+                } else {
+                    hash_tbl_[hash] = NULL;
+                    free_node(node);
                 }
                 break;
             }
@@ -54,8 +65,7 @@ bool Encoder::find_in_hash(const char *inp, uint8_t len) {
         } else if (try_locn >= len) {
             if ((node->len_ >= len) &&
                 (memcmp(src_->peek_back(try_locn), inp, len) == 0)) {
-                match_locn_ = try_locn;
-                match_len_ = len;
+                *match_locn = try_locn;
                 return true;
             }
         }
@@ -75,15 +85,21 @@ void Encoder::encode() {
         matched_ = false;
         bool looking = true;
         size_t look_ahead = kMinLookAhead;
-        match_locn_ = 0;
-        match_len_ = 0;
+        uint16_t match_locn = 0;
+        uint8_t match_len = 0;
         while (looking && look_ahead <= constants::kMaxLen) {
-            bool have_match = find_match(src_->peek(), look_ahead);
-          
+            bool have_match = find_in_hash(src_->peek(), look_ahead, &match_locn);
+            add_to_hash(src_->peek(), look_ahead);
+#ifdef ALZ_DEBUG_
+            added_++;
+#endif // ALZ_DEBUG_
             if (!have_match) {
-                added_++;               
                 looking = false;
             } else {
+#ifdef ALZ_DEBUG_
+                found_++;
+#endif // ALZ_DEBUG_
+                match_len = look_ahead;
                 matched_ = true;
                 if (src_->available() > look_ahead) {
                     look_ahead++;
@@ -95,25 +111,16 @@ void Encoder::encode() {
         if (!matched_) {
             output_byte();            
         } else {
-            emit_compressed(match_locn_, match_len_);
-            src_->skip(match_len_);
+            emit_compressed(match_locn, match_len);
+            src_->skip(match_len);
         }
     }
+    flush();
 }
 
 void Encoder::flush() {
     outb_.flush();
     sink_->flush();
 }
-
-bool Encoder::find_match(const char *inp, size_t look_ahead) {   
-    if (find_in_hash(inp, look_ahead)) {
-        found_++;
-        return true;
-    }
-    add_to_hash(src_->peek(), look_ahead);
-    return false;
-}
-
-    
+   
 } // namespace alz

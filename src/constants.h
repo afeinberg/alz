@@ -8,10 +8,10 @@ namespace alz {
 namespace constants {
 
 // Max length of an encoded word
-const size_t kMaxLen = 15;
+const size_t kMaxLen = 0xf;
 
 // Maximum window since
-const size_t kMaxOffset = 4095;
+const size_t kMaxOffset = 0xfff;
 
 } // namespace constants
 
