@@ -119,25 +119,7 @@ void Encoder::flush() {
  *
  *    I then experimented with implementing chaining collision
  *    resolution, using a memory pool for allocating the linked list
- *    nodes. However, I found that given the small sliding window
- *    (4096 bytes, i.e., 2^12) there was performance benefit (and even
- *    a slight performance) cost to using chaining vs. simply ignoring
- *    hash collisions (treating them as cache misses). This, of
- *    course, came at the cost of higher memory utilization due to a
- *    larger bucket table. If you note in the code, when ALZ_DEBUG_ is
- *    enabled I keep track of hits and misses -- the percentage
- *    increase in cache hits was only a few percent higher as result
- *    of using chaining collision resolution.
- *
- *    Based on these results, I chose the "use just the hash table
- *    buckets, no resolution, treat collisions as cache misses"
- *    approach.
- *
- *    One approach I did not, however, experiment with was using a
- *    very small fast to compute hash function (with lots of
- *    collisions). The reason I didn't experiment with this is that
- *    cost of computing the hash is fairly minor due to the cost of
- *    finding the match by searching.
+ *    nodes.
  *
  * After being told by Glen that I could look at other lz77
  * implementations, I found that a better approach would have been to
