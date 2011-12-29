@@ -45,7 +45,7 @@ class Encoder {
     void flush();    
   private:
     static const size_t kMinLookAhead = 2;
-    static const size_t kHashLen = 16384;
+    static const size_t kHashLen = 32768;
 
     static size_t hash_fn(const char *inp, uint8_t len);
     
