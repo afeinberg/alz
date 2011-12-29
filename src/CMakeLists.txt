@@ -9,8 +9,6 @@ set(COMMON_SOURCES
 
 add_executable(alz_encode encode_main.cc ${COMMON_SOURCES})
 add_executable(alz_decode decode_main.cc ${COMMON_SOURCES})
-target_link_libraries(alz_encode)
-target_link_libraries(alz_decode)
 
 if(GTEST_FOUND)
   include_directories(${GTEST_INCLUDE_DIRS})
