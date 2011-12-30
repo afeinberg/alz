@@ -46,7 +46,7 @@ uint8_t Encoder::find_longest(const char *inp, uint16_t *match_locn) {
     uint16_t longest_locn = 0;
     HashNode *node = list;
     HashNode *prev = NULL;
-    while (node != NULL) {
+    while (node != NULL && longest < lim) {
         size_t off = src_->pos() - node->pos_;
         if (off > constants::kMaxOffset) {
             if (prev != NULL) {
@@ -58,7 +58,7 @@ uint8_t Encoder::find_longest(const char *inp, uint16_t *match_locn) {
             // node in the bucket is too far out to keep
             // the code clean
         } else if (off >= longest) {  
-            uint8_t len = longest;
+            uint8_t len = longest_locn == 0 ? longest : longest + 1;
             bool looking = true;            
             while (looking && len <= off && len <= lim) {
                 if (memcmp(inp, src_->peek_back(off), len) == 0) {
