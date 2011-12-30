@@ -24,55 +24,61 @@ Encoder::~Encoder() {
 }
 
 void Encoder::init_hash() {
+    
 #ifdef ALZ_DEBUG_
     added_  = 0;
     found_ = 0;
 #endif // ALZ_DEBUG_
+    
     hash_tbl_ = new HashNode*[kHashLen];
     memset(hash_tbl_, 0, kHashLen);
 }
 
-inline bool Encoder::find_in_hash(const char *inp,
-                                  uint8_t len,
-                                  uint16_t *match_locn) {
-    size_t hash = hash_fn(inp, len);
+uint8_t Encoder::find_longest(const char *inp, uint16_t *match_locn) {
+    size_t hash = hash_fn(inp);
     HashNode *list = hash_tbl_[hash];
     if (list == NULL) {
-        return false;
+        return 0;
     }
-    HashNode *prev = NULL;
+    size_t lim = src_->available() < constants::kMaxLen ?
+            src_->available() : constants::kMaxLen;
+    uint8_t longest = kMinLookAhead;
+    uint16_t longest_locn = 0;
     HashNode *node = list;
+    HashNode *prev = NULL;
     while (node != NULL) {
-        size_t try_locn = src_->pos() - node->pos_;
-        if (try_locn >= constants::kMaxOffset) {
+        size_t off = src_->pos() - node->pos_;
+        if (off > constants::kMaxOffset) {
             if (prev != NULL) {
                 prev->next_ = node->next_;
-                free_node(node);
-                node = prev->next_;
-            } else {
-                if (node->next_) {
-                    hash_tbl_[hash] = node->next_;
-                    free_node(node);
-                    node = hash_tbl_[hash]->next_;
-                    prev = hash_tbl_[hash];
-                } else {
-                    hash_tbl_[hash] = NULL;
-                    free_node(node);
-                }
-                break;
+                node = prev;
             }
-            continue;
-        } else if (try_locn >= len) {
-            if ((node->len_ >= len) &&
-                (memcmp(src_->peek_back(try_locn), inp, len) == 0)) {
-                *match_locn = try_locn;
-                return true;
+        } else if (off >= longest) {  
+            uint8_t len = longest;
+            bool looking = true;            
+            while (looking && len <= off && len <= lim) {
+                if (memcmp(inp, src_->peek_back(off), len) == 0) {
+                    longest = len;
+                    longest_locn = off;
+                    len++;
+                } else {
+                    looking = false;
+                }
             }
         }
         prev = node;
         node = node->next_;
     }
-    return false;
+    if (longest_locn != 0) {
+        
+#ifdef ALZ_DEBUG_
+        found_++;
+#endif // ALZ_DEBUG_
+        
+        *match_locn = longest_locn;
+        return longest;
+    }
+    return 0;
 }
     
 void Encoder::encode() {
@@ -82,33 +88,11 @@ void Encoder::encode() {
             output_byte();
             continue;
         }
-        matched_ = false;
-        bool looking = true;
-        size_t look_ahead = kMinLookAhead;
         uint16_t match_locn = 0;
         uint8_t match_len = 0;
-        while (looking && look_ahead <= constants::kMaxLen) {
-            bool have_match = find_in_hash(src_->peek(), look_ahead, &match_locn);
-            add_to_hash(src_->peek(), look_ahead);
-#ifdef ALZ_DEBUG_
-            added_++;
-#endif // ALZ_DEBUG_
-            if (!have_match) {
-                looking = false;
-            } else {
-#ifdef ALZ_DEBUG_
-                found_++;
-#endif // ALZ_DEBUG_
-                match_len = look_ahead;
-                matched_ = true;
-                if (src_->available() > look_ahead) {
-                    look_ahead++;
-                } else {
-                    looking = false;                    
-                }
-            }
-        }
-        if (!matched_) {
+        match_len = find_longest(src_->peek(), &match_locn);
+        add_to_hash(src_->peek());
+        if (match_len == 0) {
             output_byte();            
         } else {
             emit_compressed(match_locn, match_len);

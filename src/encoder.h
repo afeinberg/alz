@@ -25,7 +25,6 @@ using std::pair;
 struct HashNode {
     HashNode *next_;
     size_t pos_;
-    uint8_t len_;
 };
 
 class Encoder {
@@ -49,17 +48,17 @@ class Encoder {
     // Flush out the rest of the buffer to source
     void flush();    
   private:
-    static const size_t kMinLookAhead = 4;
+    static const size_t kMinLookAhead = 3;
     static const size_t kHashLen = 16384;
 
     // Separate functions to let me experiment with using
     // malloc/free vs. using a memory pool
     HashNode *alloc_node();
     void free_node(HashNode *node);
-    static size_t hash_fn(const char *inp, uint8_t len);    
+    static size_t hash_fn(const char *inp);    
     void init_hash();
-    void add_to_hash(const char *inp, uint8_t len);
-    bool find_in_hash(const char *inp, uint8_t len, uint16_t *match_locn);
+    void add_to_hash(const char *inp);
+    uint8_t find_longest(const char *inp, uint16_t *match_locn);
     
     void output_byte();
     
@@ -88,9 +87,9 @@ inline void Encoder::free_node(HashNode *node) {
     pool_.free(node);
 }
 
-inline size_t Encoder::hash_fn(const char *inp, uint8_t len)  {
+inline size_t Encoder::hash_fn(const char *inp)  {
     size_t h = 5381;
-    const char *last = inp + len;
+    const char *last = inp + kMinLookAhead;
     for ( ; inp < last; ++inp) {
         h = ((h << 5) + h) ^ *inp;
     }
@@ -114,10 +113,12 @@ inline void Encoder::output_byte() {
     src_->skip(1);
 }
 
-inline void Encoder::add_to_hash(const char *inp, uint8_t len) {
-    size_t hash = hash_fn(inp, len);
+inline void Encoder::add_to_hash(const char *inp) {
+#ifdef ALZ_DEBUG_
+    added_++;
+#endif // ALZ_DEBUG_
+    size_t hash = hash_fn(inp);
     HashNode *new_node = alloc_node();
-    new_node->len_ = len;
     new_node->pos_ = src_->pos() + 1;
     new_node->next_ = hash_tbl_[hash];
     hash_tbl_[hash] = new_node;

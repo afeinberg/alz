@@ -82,8 +82,7 @@ FileSource::FileSource(const char *path, size_t buf_len)
          bleft_(0),
          double_buf_(new char[buf_len_ * 2]),
          buf_(double_buf_ + buf_len_),
-         ptr_(buf_ + buf_len_) {
-}
+         ptr_(buf_ + buf_len_) { }
 
 FileSource::~FileSource() {
     delete [] double_buf_;
