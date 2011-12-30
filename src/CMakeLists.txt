@@ -1,4 +1,7 @@
 find_package(GTest)
+find_package(Boost REQUIRED)
+
+include_directories(${Boost_INCLUDE_DIR})
 
 set(COMMON_SOURCES 
   constants.h util.h bit_stream.h

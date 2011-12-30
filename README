@@ -3,6 +3,17 @@ Quick explanation:
 * I only had a chance to test this under Linux. This will not work
   under Windows, as I am making use of read()/write() directly.
 
+  Only external requirements are cmake and Boost. From boost, I am
+  only using the memory pool class (it's a header, no shared libraries
+  required):
+
+  http://www.boost.org/doc/libs/1_47_0/libs/pool/doc/index.html
+
+  (I did try plain malloc first and it had noticeable performance
+  overhead.  Unfortunately, I did not have time to use jemalloc or
+  tcmalloc, which possibly would have made the use of memory pool --
+  for the hash table chains -- un-needed).
+  
 * To compile, run: 
 
   cmake . && make
@@ -63,4 +74,5 @@ Quick explanation:
 * encoder.cc / encoder.h and decoder.cc / decoder.h should be self
   explanatory 
 
+* Anything ending with _test is a unit test.
         
