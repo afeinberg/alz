@@ -5,6 +5,9 @@ Quick explanation:
   project would be more challenging and also more relevant for the
   position at hand.
 
+* The algorithm itself is modified from one used by zlib:
+  http://www.gzip.org/algorithm.txt 
+
 * I only had a chance to test this under Linux. This will not work
   under Windows, as I am making use of read()/write() directly.
 

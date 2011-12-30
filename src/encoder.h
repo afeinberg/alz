@@ -88,15 +88,15 @@ inline void Encoder::free_node(HashNode *node) {
 }
 
 inline size_t Encoder::hash_fn(const char *inp)  {
-    // Using the same hash function as used by gzip
-    // Previously I used djb's hash function
-    size_t h = 0;
-    const char *last = inp + kMinLookAhead;
-    for ( ; inp < last; ++inp) {
-        h = (h << 5) ^ *inp;
-        h &= (kHashLen - 1);
-    }
-    return h;
+    // This algorithm seems to work best after
+    // several experiments with others (including djb hash,
+    // as well as the hash function used by zlib).
+    // It's take from ning-compress LZF implementation:
+    // < https://github.com/ning/compress/blob/master/src/main/java/com/ning/compress/lzf/ChunkEncoder.java >
+    
+    uint32_t *ptr = (uint32_t *) inp;
+    uint32_t h = (*ptr) & 0xffffff; // get the first 3 bytes
+    return ((h * 57321) >> 9) & (kHashLen - 1);    
 }
 
 inline void Encoder::emit_literal(char byte) {
