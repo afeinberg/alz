@@ -51,8 +51,12 @@ uint8_t Encoder::find_longest(const char *inp, uint16_t *match_locn) {
         if (off > constants::kMaxOffset) {
             if (prev != NULL) {
                 prev->next_ = node->next_;
+                free_node(node);
                 node = prev;
             }
+            // don't bother with the case where the first
+            // node in the bucket is too far out to keep
+            // the code clean
         } else if (off >= longest) {  
             uint8_t len = longest;
             bool looking = true;            
