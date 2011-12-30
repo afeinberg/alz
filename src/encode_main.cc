@@ -19,7 +19,6 @@ void encode_file(const char *input_path,
     assert(sink->open_file());
     Timer timer("encode_file");
     enc.encode();
-    enc.flush();
     src->close_file();
     sink->close_file();
 }

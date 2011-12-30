@@ -10,10 +10,11 @@
 #include <vector>
 #include <algorithm>
 
+#include <boost/pool/pool.hpp>
+
 #include "util.h"
 #include "bit_stream.h"
 #include "constants.h"
-#include "memmem_opt.h"
 
 namespace alz {
 
@@ -21,7 +22,10 @@ using std::shared_ptr;
 using std::vector;
 using std::pair;
 
-typedef vector<pair<size_t, uint8_t> > HashTbl;
+struct HashNode {
+    HashNode *next_;
+    size_t pos_;
+};
 
 class Encoder {
   public:
@@ -44,42 +48,48 @@ class Encoder {
     // Flush out the rest of the buffer to source
     void flush();    
   private:
-    static const size_t kMinLookAhead = 2;
-    static const size_t kHashLen = 32768;
+    static const size_t kMinLookAhead = 3;
+    static const size_t kHashLen = 16384;
 
-    static size_t hash_fn(const char *inp, uint8_t len);
-    
-    static bool find_in_window(const char *haystack,
-                               size_t haystack_len,
-                               const char *needle,
-                               size_t needle_len,
-                               size_t *needle_pos);
+    // Separate functions to let me experiment with using
+    // malloc/free vs. using a memory pool
+    HashNode *alloc_node();
+    void free_node(HashNode *node);
+    static size_t hash_fn(const char *inp);    
     void init_hash();
-    void add_to_hash(const char *inp, uint8_t len, uint16_t locn);
-    bool find_in_hash(const char *inp, uint8_t len);
+    void add_to_hash(const char *inp);
+    uint8_t find_longest(const char *inp, uint16_t *match_locn);
     
     void output_byte();
-    bool find_match(const char *inp,
-                    size_t look_ahead);
     
     shared_ptr<Source> src_;
     shared_ptr<Sink> sink_;    
     OutBitStream outb_;
     size_t init_pos_;
     bool matched_;
-    uint16_t match_locn_;
-    uint8_t match_len_;
-    HashTbl hash_tbl_;
+    HashNode **hash_tbl_;
+    boost::pool<> pool_;
 #ifdef ALZ_DEBUG_
-    int hash_found_;
-    int hash_not_found_;
+    size_t added_;
+    size_t found_;
 #endif // ALZ_DEBUG_
 };
 
 
-inline size_t Encoder::hash_fn(const char *inp, uint8_t len)  {
+inline HashNode *Encoder::alloc_node() {
+    HashNode *ret = (HashNode *) pool_.malloc();
+    assert(ret != NULL);
+    return ret;    
+}
+
+inline void Encoder::free_node(HashNode *node) {
+    assert(node != NULL);
+    pool_.free(node);
+}
+
+inline size_t Encoder::hash_fn(const char *inp)  {
     size_t h = 5381;
-    const char *last = inp + len;
+    const char *last = inp + kMinLookAhead;
     for ( ; inp < last; ++inp) {
         h = ((h << 5) + h) ^ *inp;
     }
@@ -103,11 +113,15 @@ inline void Encoder::output_byte() {
     src_->skip(1);
 }
 
-inline void Encoder::add_to_hash(const char *inp, uint8_t len, uint16_t locn) {
-    size_t hash = hash_fn(inp, len);
-    pair<size_t, uint8_t> &m = hash_tbl_[hash];
-    m.first = src_->pos() - locn;
-    m.second = len;
+inline void Encoder::add_to_hash(const char *inp) {
+#ifdef ALZ_DEBUG_
+    added_++;
+#endif // ALZ_DEBUG_
+    size_t hash = hash_fn(inp);
+    HashNode *new_node = alloc_node();
+    new_node->pos_ = src_->pos() + 1;
+    new_node->next_ = hash_tbl_[hash];
+    hash_tbl_[hash] = new_node;
 }
 
     

@@ -15,18 +15,8 @@ inline long time_usecs() {
     gettimeofday(&tv, NULL);
     return tv.tv_usec + tv.tv_sec * 1000000;
 }
-
-inline void debug_log(const char *msg,
-                      const char *file,
-                      int lineno) {
-#ifdef ALZ_DEBUG_
-    fprintf(stderr, "%s at %s:%d\n", msg, file, lineno);
-#endif // ALZ_DEBUG_    
-}
     
 } // namespace util
-
-#define DLOG(msg) util::debug_log(msg, __FILE__, __LINE__)
 
 class Timer {
   public:

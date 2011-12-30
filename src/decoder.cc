@@ -28,6 +28,7 @@ void Decoder::decode() {
             sink_->append(&byte, 1);
         }
     }
+    sink_->flush();
 }
 
 } // namespace alz
