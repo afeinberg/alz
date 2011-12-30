@@ -75,7 +75,7 @@ class Encoder {
 #endif // ALZ_DEBUG_
 };
 
-
+    
 inline HashNode *Encoder::alloc_node() {
     HashNode *ret = (HashNode *) pool_.malloc();
     assert(ret != NULL);
@@ -88,12 +88,15 @@ inline void Encoder::free_node(HashNode *node) {
 }
 
 inline size_t Encoder::hash_fn(const char *inp)  {
-    size_t h = 5381;
+    // Using the same hash function as used by gzip
+    // Previously I used djb's hash function
+    size_t h = 0;
     const char *last = inp + kMinLookAhead;
     for ( ; inp < last; ++inp) {
-        h = ((h << 5) + h) ^ *inp;
+        h = (h << 5) ^ *inp;
+        h &= (kHashLen - 1);
     }
-    return h & (kHashLen - 1);
+    return h;
 }
 
 inline void Encoder::emit_literal(char byte) {

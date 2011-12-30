@@ -1,5 +1,10 @@
 Quick explanation:
 
+* I used C++ with some C++0x/C++11 features. While I've worked
+  primarily in Java for the last 2.5 years, I felt using C++ for this
+  project would be more challenging and also more relevant for the
+  position at hand.
+
 * I only had a chance to test this under Linux. This will not work
   under Windows, as I am making use of read()/write() directly.
 
