@@ -8,100 +8,55 @@ Encoder::Encoder(const shared_ptr<Source> &src,
          sink_(sink),
          outb_(sink_),         
          init_pos_(sink_->pos()),
-         hash_tbl_(NULL),
-         pool_(sizeof(HashNode)) { }
+         hash_tbl_(NULL) {
+    hash_tbl_ = (size_t *) calloc(kHashLen, sizeof(size_t));
+    assert(hash_tbl_ != NULL);
+}
 
 Encoder::~Encoder() {
-#ifdef ALZ_DEBUG_
-    printf("added = %ld, found=%ld\n", added_, found_);
-#endif // ALZ_DEBUG_
     if (hash_tbl_ != NULL) {
-        // Note: there's no need to free the individual
-        // lists as the pool allocator takes care of that
-        // when its destructor is called.
-        delete [] hash_tbl_;
+        free(hash_tbl_);
     }
 }
 
-void Encoder::init_hash() {
-    
-#ifdef ALZ_DEBUG_
-    added_  = 0;
-    found_ = 0;
-#endif // ALZ_DEBUG_
-    
-    hash_tbl_ = new HashNode*[kHashLen];
-    memset(hash_tbl_, 0, kHashLen);
-}
-
-uint8_t Encoder::find_longest(const char *inp, uint16_t *match_locn) {
-    size_t hash = hash_fn(inp);
-    HashNode *list = hash_tbl_[hash];
-    if (list == NULL) {
-        return 0;
-    }
-    size_t lim = src_->available() < constants::kMaxLen ?
-            src_->available() : constants::kMaxLen;
-    uint8_t longest = kMinLookAhead;
-    uint16_t longest_locn = 0;
-    HashNode *node = list;
-    HashNode *prev = NULL;
-    while (node != NULL && longest < lim) {
-        size_t off = src_->pos() - node->pos_;
-        if (off > constants::kMaxOffset) {
-            if (prev != NULL) {
-                prev->next_ = node->next_;
-                free_node(node);
-                node = prev;
-            }
-            // don't bother with the case where the first
-            // node in the bucket is too far out to keep
-            // the code clean
-        } else if (off >= longest) {  
-            uint8_t len = longest_locn == 0 ? longest : longest + 1;
-            bool looking = true;            
-            while (looking && len <= off && len <= lim) {
-                if (memcmp(inp, src_->peek_back(off), len) == 0) {
-                    longest = len;
-                    longest_locn = off;
-                    len++;
-                } else {
-                    looking = false;
-                }
-            }
-        }
-        prev = node;
-        node = node->next_;
-    }
-    if (longest_locn != 0) {
-        
-#ifdef ALZ_DEBUG_
-        found_++;
-#endif // ALZ_DEBUG_
-        
-        *match_locn = longest_locn;
-        return longest;
-    }
-    return 0;
-}
-    
 void Encoder::encode() {
-    init_hash();
     while (src_->available() > 0) {
         if(src_->available() < kMinLookAhead) {
             output_byte();
             continue;
         }
-        uint16_t match_locn = 0;
-        uint8_t match_len = 0;
-        match_len = find_longest(src_->peek(), &match_locn);
-        add_to_hash(src_->peek());
-        if (match_len == 0) {
-            output_byte();            
-        } else {
-            emit_compressed(match_locn, match_len);
-            src_->skip(match_len);
+        size_t in_pos = src_->pos();
+        const char *inp = src_->peek();
+        uint32_t seen = get_3bytes(inp);
+        size_t h = hash(get_3bytes(inp));
+        size_t ref = hash_tbl_[h];
+        hash_tbl_[h] = in_pos + 1;
+        
+        if (ref == 0) {
+            output_byte();
+            continue;
         }
+        
+        size_t off = in_pos - ref;
+        const char *ref_ptr = src_->peek_back(off);
+        
+        if (off > constants::kMaxOffset
+            || off <= kMinLookAhead
+            || get_3bytes(ref_ptr) != seen) {
+            output_byte();
+            continue;
+        }
+
+        size_t avail = src_->available();
+        size_t max_len = avail < constants::kMaxLen ? avail : constants::kMaxLen;
+        uint8_t len = kMinLookAhead;
+        uint8_t try_len = len;        
+        while (try_len <= off && try_len < max_len && ref_ptr[try_len] == inp[try_len]) {
+            len = try_len;
+            try_len++;
+        }
+        emit_compressed(off, len);
+        src_->skip(len);       
     }
     flush();
 }
