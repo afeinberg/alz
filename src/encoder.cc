@@ -28,7 +28,7 @@ void Encoder::encode() {
         size_t in_pos = src_->pos();
         const char *inp = src_->peek();
         uint32_t seen = get_3bytes(inp);
-        size_t h = hash(get_3bytes(inp));
+        size_t h = hash(seen);
         size_t ref = hash_tbl_[h];
         hash_tbl_[h] = in_pos + 1;
         
