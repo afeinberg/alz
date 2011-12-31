@@ -56,6 +56,10 @@ void Encoder::encode() {
             try_len++;
         }
         emit_compressed(off, len);
+        in_pos++;
+        for (int i = 1; i < len; ++i) {
+            hash_tbl_[hash(get_3bytes(++inp))] = ++in_pos; 
+        }
         src_->skip(len);       
     }
     flush();

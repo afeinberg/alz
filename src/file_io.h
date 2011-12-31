@@ -83,12 +83,10 @@ class FileSource : public Source {
 };
 
 inline const char *FileSource::peek() {
-    assert(is_open());
     return ptr_;
 }
 
 inline const char *FileSource::peek_back(size_t offset) {
-    assert(is_open());    
     return ptr_ - offset - 1;
 }
 

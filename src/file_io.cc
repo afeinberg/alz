@@ -89,8 +89,6 @@ FileSource::~FileSource() {
 }
 
 void FileSource::skip(size_t n) {
-    assert(n <= constants::kMaxLen);
-    assert(is_open());
     ptr_ += n;
     gpos_ += n;
     bleft_ -= n;   
@@ -102,7 +100,6 @@ void FileSource::skip(size_t n) {
 }
 
 bool FileSource::open_file() {
-    assert(is_closed());
     struct stat sb;
     if (stat(path_, &sb) == -1) {
         perror("stat");
